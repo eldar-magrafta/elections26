@@ -30,5 +30,43 @@ service cloud.firestore {
       allow write: if request.auth != null
                    && request.auth.token.email == 'eldar@users.elections26.app';
     }
+
+    // Username -> uid registry, so a side bet can look up "dana123" and
+    // invite the right account. Doc id is the lowercase username. A user may
+    // only ever claim/own their OWN mapping — never overwrite someone else's.
+    match /usernames/{username} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == request.resource.data.uid
+                   && (resource == null || resource.data.uid == request.auth.uid);
+    }
+
+    // Side bets: a custom over/under challenge between two registered users.
+    // Visible to everyone signed in (a public feed); only the two people
+    // involved can ever change its status, and only along a pending ->
+    // accepted/declined/cancelled path — no other field may change on update.
+    match /sidebets/{betId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.creatorUid
+                    && request.resource.data.creatorUid != request.resource.data.inviteeUid
+                    && request.resource.data.status == 'pending';
+      allow update: if request.auth != null
+                    && request.resource.data.creatorUid == resource.data.creatorUid
+                    && request.resource.data.inviteeUid == resource.data.inviteeUid
+                    && request.resource.data.partyId == resource.data.partyId
+                    && request.resource.data.line == resource.data.line
+                    && request.resource.data.creatorSide == resource.data.creatorSide
+                    && (
+                         (request.auth.uid == resource.data.inviteeUid
+                          && resource.data.status == 'pending'
+                          && request.resource.data.status in ['accepted', 'declined'])
+                         ||
+                         (request.auth.uid == resource.data.creatorUid
+                          && resource.data.status == 'pending'
+                          && request.resource.data.status == 'cancelled')
+                       );
+      allow delete: if false;
+    }
   }
 }

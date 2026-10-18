@@ -325,6 +325,41 @@
             filter: drop-shadow(0 10px 30px rgba(0,0,0,.45));
         }
         @keyframes spin-fast { to { transform: rotate(360deg); } }
+
+        .bet-form-card {
+            background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+            padding: 18px 18px 14px; margin-bottom: 14px; box-shadow: var(--shadow-sm);
+        }
+        .side-toggle { margin-bottom: 0; }
+        .side-btn {
+            flex: 1; border: 0; background: transparent; padding: 9px 0; border-radius: 11px;
+            font: inherit; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; transition: all .15s;
+        }
+        .side-btn.active { background: var(--card); color: var(--navy); box-shadow: var(--shadow-sm); }
+
+        .bet-card {
+            background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
+            margin-bottom: 8px; box-shadow: var(--shadow-sm);
+        }
+        .bet-top { display: flex; align-items: center; gap: 10px; }
+        .bet-info { flex: 1; min-width: 0; }
+        .bet-party { font-weight: 700; font-size: 14px; }
+        .bet-sides { font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .bet-vs { opacity: .6; margin: 0 2px; }
+        .bet-status {
+            font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 10px; flex-shrink: 0;
+            background: var(--paper); color: var(--muted); white-space: nowrap;
+        }
+        .bet-status-accepted { background: rgba(14,168,148,.14); color: var(--teal); }
+        .bet-status-declined, .bet-status-cancelled { background: rgba(226,59,78,.12); color: var(--danger); }
+        .bet-outcome {
+            margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line);
+            font-size: 12.5px; color: var(--muted);
+        }
+        .bet-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .bet-actions button { flex: 1; padding: 8px 0; font-size: 13px; }
+        .bet-actions .bet-accept { border-color: var(--teal); color: var(--teal); }
+        .bet-actions .bet-decline { border-color: var(--danger); color: var(--danger); }
     </style>
 </head>
 <body>
@@ -376,12 +411,13 @@
         <button class="tab active" data-tab="guess">הניחוש שלי</button>
         <button class="tab" data-tab="all">כל הניחושים</button>
         <button class="tab" data-tab="board">לוח התוצאות</button>
+        <button class="tab" data-tab="sidebets">הימורים צדדיים</button>
         <button class="tab" id="adminTab" data-tab="admin" style="display:none">עדכון תוצאות</button>
     </div>
 
     <div id="guessView" style="display:none">
         <div class="chart-card">
-            <div class="chart-card-title">🎯 התפלגות המנדטים שלכם</div>
+            <div class="chart-card-title">התפלגות המנדטים שלכם</div>
             <div id="mandateChart"></div>
         </div>
         <div class="totalbar">
@@ -402,6 +438,37 @@
     <div id="leaderView" style="display:none">
         <div id="leaderStatus" style="margin-bottom:10px;color:var(--muted);font-size:13px;text-align:center"></div>
         <div id="leaderList"></div>
+    </div>
+
+    <div id="sidebetsView" style="display:none">
+        <div class="howto">
+            <b>איך זה עובד:</b> בוחרים מפלגה וקו (לדוגמה 5.5), מחליטים אם אתם על <b>אובר</b> או <b>אנדר</b> הקו,
+            ומחפשים משתמש רשום להזמין לקחת את הצד השני. כל ההימורים גלויים לכולם כאן.
+        </div>
+        <div class="bet-form-card">
+            <div class="field">
+                <label for="betParty">מפלגה</label>
+                <select id="betParty"></select>
+            </div>
+            <div class="field">
+                <label for="betLine">קו (לדוגמה 5.5)</label>
+                <input id="betLine" type="number" step="0.5" min="0" max="120" placeholder="5.5">
+            </div>
+            <div class="field">
+                <label>הצד שלי</label>
+                <div class="login-tabs side-toggle">
+                    <button type="button" class="side-btn active" data-side="over">אובר</button>
+                    <button type="button" class="side-btn" data-side="under">אנדר</button>
+                </div>
+            </div>
+            <div class="field">
+                <label for="betInvitee">שם משתמש להזמנה</label>
+                <input id="betInvitee" type="text" autocomplete="off" placeholder="לדוגמה: dana123">
+            </div>
+            <div class="user-msg" id="betMsg"></div>
+            <button class="btn-primary" id="createBetBtn">שלח הזמנה</button>
+        </div>
+        <div id="sidebetsList"></div>
     </div>
 
     <div id="adminView" style="display:none">
@@ -457,7 +524,7 @@ import {
     getAuth, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence,
     createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile
 } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 // =====================================================================
 //  CONFIG — paste your Firebase web-app config here (see README.md)
@@ -497,7 +564,7 @@ const DEADLINE = new Date('2026-10-27T05:59:00+02:00').getTime();
 const MAX_MANDATES = 120;
 
 // =====================================================================
-//  PARTIES — רשימת המפלגות לבחירות 2026. ot = אות הבחירות, he = שם מלא.
+//  PARTIES — רשימת המפלגות לבחירות 2026. id = מזהה המפלגה, he = שם מלא.
 // =====================================================================
 const PALETTE = [
     '#1a3a6b', '#c62828', '#2e7d32', '#6a1b9a', '#ef6c00', '#00695c',
@@ -519,8 +586,8 @@ const RAW_PARTIES = [
     ['רק', 'ביחד - נפתלי בנט', 'ביחד-בנט.webp'],
     ['שס', 'ש"ס - אריה דרעי', 'Shas_logo.svg.webp']
 ];
-const PARTIES = RAW_PARTIES.map(([ot, he, logo], i) => ({
-    id: ot, ot, he, logo: logo ? `logos/${logo}` : '', color: PALETTE[i % PALETTE.length]
+const PARTIES = RAW_PARTIES.map(([id, he, logo], i) => ({
+    id, he, logo: logo ? `logos/${logo}` : '', color: PALETTE[i % PALETTE.length]
 }));
 
 // ---------------------------------------------------------------------
@@ -528,7 +595,7 @@ const $ = sel => document.querySelector(sel);
 const partyById = id => PARTIES.find(p => p.id === id);
 const badgeHtml = p => p.logo
     ? `<img src="${p.logo}" alt="${p.he}" loading="lazy">`
-    : p.ot;
+    : p.he.charAt(0);
 
 // ================= Logo hover-preview (desktop) + tap lightbox (mobile) =================
 const canHoverPreview = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -653,6 +720,13 @@ async function registerWithUsername() {
         const cred = await createUserWithEmailAndPassword(auth, c.email, c.password);
         await updateProfile(cred.user, { displayName: c.username });
         currentUser = cred.user;
+        // Register the username -> uid mapping so side bets can look up and
+        // invite this person by username later.
+        try {
+            await setDoc(doc(db, 'usernames', c.username.toLowerCase()), {
+                uid: cred.user.uid, username: c.username, createdAt: Date.now()
+            });
+        } catch (_) { /* non-fatal — worst case this account can't be invited to a side bet yet */ }
     } catch (e) {
         if (e && e.code === 'auth/email-already-in-use')
             userMsg('שם המשתמש כבר תפוס — בחרו אחר או לחצו "כניסה"', 'err');
@@ -705,6 +779,7 @@ function showLogin() {
     $('#guessView').style.display = 'none';
     $('#allView').style.display = 'none';
     $('#leaderView').style.display = 'none';
+    $('#sidebetsView').style.display = 'none';
     $('#adminView').style.display = 'none';
     $('#userbar').style.display = 'none';
     $('#howto').style.display = 'none';
@@ -722,6 +797,16 @@ async function enterApp() {
     $('#howto').style.display = 'block';
 
     $('#adminTab').style.display = (currentUser.email === ADMIN_EMAIL) ? '' : 'none';
+
+    // Backfill the username registry for accounts that registered before this
+    // mapping existed — makes every existing user invitable to a side bet
+    // the next time they happen to log in. The security rule only allows
+    // writing a mapping you already own, so this is always safe to retry.
+    try {
+        await setDoc(doc(db, 'usernames', (currentUser.displayName || '').toLowerCase()), {
+            uid: currentUser.uid, username: currentUser.displayName || '', createdAt: Date.now()
+        }, { merge: true });
+    } catch (_) { /* offline, or mapping already belongs to someone else */ }
 
     // Reset to a clean slate before loading — otherwise switching users in the
     // same tab (without a full page reload) leaves the previous user's
@@ -774,9 +859,11 @@ function switchTab(tab) {
     $('#submitbar').style.display  = tab === 'guess' ? 'block' : 'none';
     $('#allView').style.display    = tab === 'all'   ? 'block' : 'none';
     $('#leaderView').style.display = tab === 'board' ? 'block' : 'none';
+    $('#sidebetsView').style.display = tab === 'sidebets' ? 'block' : 'none';
     $('#adminView').style.display  = tab === 'admin' ? 'block' : 'none';
-    if (tab === 'all')   loadAllGuesses();
-    if (tab === 'board') loadLeaderboard();
+    if (tab === 'all')      loadAllGuesses();
+    if (tab === 'board')    loadLeaderboard();
+    if (tab === 'sidebets') loadSidebets();
 }
 
 function clamp(n) { return Math.max(0, Math.min(MAX_MANDATES, Math.round(n))); }
@@ -796,7 +883,7 @@ function syncChart() {
         mandateChart = new ApexCharts(document.querySelector('#mandateChart'), {
             chart: { type: 'donut', height: 300, animations: { enabled: true, easing: 'easeinout', speed: 250 } },
             series,
-            labels: PARTIES.map(p => `${p.ot} · ${p.he}`),
+            labels: PARTIES.map(p => p.he),
             colors: PARTIES.map(p => p.color),
             stroke: { width: 2, colors: ['#ffffff'] },
             plotOptions: {
@@ -1095,6 +1182,157 @@ async function loadLeaderboard() {
     }
 }
 
+// ================= Side bets (public over/under challenges) =================
+let betSide = 'over';
+const BET_STATUS_LABEL = { pending: 'ממתין לאישור', accepted: 'אושר', declined: 'נדחה', cancelled: 'בוטל' };
+
+function populateBetPartySelect() {
+    $('#betParty').innerHTML = PARTIES.map(p => `<option value="${p.id}">${p.he}</option>`).join('');
+}
+
+function setBetMsg(text, kind) {
+    const el = $('#betMsg');
+    el.textContent = text || '';
+    el.className = 'user-msg' + (kind ? ' ' + kind : '');
+}
+
+async function createSideBet() {
+    if (!currentUser || !db) return;
+    const partyId = $('#betParty').value;
+    const line = Number($('#betLine').value);
+    const inviteeUsername = $('#betInvitee').value.trim();
+    if (!Number.isFinite(line) || line <= 0 || line > MAX_MANDATES) {
+        setBetMsg('יש להזין קו תקין (למשל 5.5)', 'err');
+        return;
+    }
+    if (!inviteeUsername) {
+        setBetMsg('יש להזין שם משתמש להזמנה', 'err');
+        return;
+    }
+    $('#createBetBtn').disabled = true;
+    try {
+        const uSnap = await getDoc(doc(db, 'usernames', inviteeUsername.toLowerCase()));
+        if (!uSnap.exists()) {
+            setBetMsg('משתמש לא נמצא — בדקו את האיות', 'err');
+            return;
+        }
+        const invitee = uSnap.data();
+        if (invitee.uid === currentUser.uid) {
+            setBetMsg('אי אפשר להזמין את עצמך', 'err');
+            return;
+        }
+        await addDoc(collection(db, 'sidebets'), {
+            creatorUid: currentUser.uid,
+            creatorName: currentUser.displayName || 'שחקן',
+            inviteeUid: invitee.uid,
+            inviteeName: invitee.username || inviteeUsername,
+            partyId, line, creatorSide: betSide,
+            status: 'pending',
+            createdAt: Date.now()
+        });
+        setBetMsg('ההזמנה נשלחה!', 'ok');
+        $('#betLine').value = '';
+        $('#betInvitee').value = '';
+        loadSidebets();
+    } catch (_) {
+        setBetMsg('שליחת ההזמנה נכשלה, נסו שוב', 'err');
+    } finally {
+        $('#createBetBtn').disabled = false;
+    }
+}
+
+async function respondToBet(betId, newStatus) {
+    try {
+        await updateDoc(doc(db, 'sidebets', betId), { status: newStatus, respondedAt: Date.now() });
+        toast(newStatus === 'accepted' ? 'ההימור אושר!' : 'ההימור נדחה');
+        loadSidebets();
+    } catch (_) {
+        toast('הפעולה נכשלה, נסו שוב', true);
+    }
+}
+
+async function cancelBet(betId) {
+    try {
+        await updateDoc(doc(db, 'sidebets', betId), { status: 'cancelled', respondedAt: Date.now() });
+        toast('ההזמנה בוטלה');
+        loadSidebets();
+    } catch (_) {
+        toast('הביטול נכשל, נסו שוב', true);
+    }
+}
+
+function sideLabel(s) { return s === 'over' ? 'אובר' : 'אנדר'; }
+
+function renderBetCard(bet) {
+    const party = partyById(bet.partyId);
+    const card = document.createElement('div');
+    card.className = 'bet-card';
+    const otherSide = bet.creatorSide === 'over' ? 'under' : 'over';
+
+    let outcomeHtml = '';
+    if (bet.status === 'accepted' && hasRealResults && party) {
+        const real = realResults[party.id] || 0;
+        const actual = real > bet.line ? 'over' : 'under';
+        const winnerName = actual === bet.creatorSide ? bet.creatorName : bet.inviteeName;
+        outcomeHtml = `<div class="bet-outcome">תוצאה בפועל: ${real} מנדטים (${sideLabel(actual)}) · ניצח/ה: <b>${winnerName}</b></div>`;
+    }
+
+    card.innerHTML = `
+        <div class="bet-top">
+            <div class="badge" style="background:${party && party.logo ? '#fff' : (party ? party.color + '22' : '#eee')};color:${party ? party.color : '#999'}">${party ? badgeHtml(party) : '?'}</div>
+            <div class="bet-info">
+                <div class="bet-party">${party ? party.he : 'מפלגה לא ידועה'} · קו ${bet.line}</div>
+                <div class="bet-sides">${bet.creatorName} (${sideLabel(bet.creatorSide)}) <span class="bet-vs">מול</span> ${bet.inviteeName} (${sideLabel(otherSide)})</div>
+            </div>
+            <div class="bet-status bet-status-${bet.status}">${BET_STATUS_LABEL[bet.status] || bet.status}</div>
+        </div>
+        ${outcomeHtml}
+        <div class="bet-actions"></div>`;
+
+    const actionsEl = card.querySelector('.bet-actions');
+    const canRespond = bet.status === 'pending' && currentUser && currentUser.uid === bet.inviteeUid;
+    const canCancel = bet.status === 'pending' && currentUser && currentUser.uid === bet.creatorUid;
+    if (canRespond) {
+        const acceptBtn = document.createElement('button');
+        acceptBtn.className = 'btn-ghost bet-accept';
+        acceptBtn.textContent = 'קבל';
+        acceptBtn.addEventListener('click', () => respondToBet(bet.id, 'accepted'));
+        const declineBtn = document.createElement('button');
+        declineBtn.className = 'btn-ghost bet-decline';
+        declineBtn.textContent = 'דחה';
+        declineBtn.addEventListener('click', () => respondToBet(bet.id, 'declined'));
+        actionsEl.append(acceptBtn, declineBtn);
+    } else if (canCancel) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn-ghost';
+        cancelBtn.textContent = 'בטל הזמנה';
+        cancelBtn.addEventListener('click', () => cancelBet(bet.id));
+        actionsEl.appendChild(cancelBtn);
+    } else {
+        actionsEl.remove();
+    }
+    return card;
+}
+
+async function loadSidebets() {
+    const list = $('#sidebetsList');
+    list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    try {
+        const snaps = await getDocs(collection(db, 'sidebets'));
+        const bets = [];
+        snaps.forEach(d => bets.push({ id: d.id, ...d.data() }));
+        if (!bets.length) {
+            list.innerHTML = '<div class="lb-empty">אין עדיין הימורים צדדיים. היו הראשונים!</div>';
+            return;
+        }
+        bets.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        list.innerHTML = '';
+        bets.forEach(bet => list.appendChild(renderBetCard(bet)));
+    } catch (_) {
+        list.innerHTML = '<div class="lb-empty">טעינה נכשלה.</div>';
+    }
+}
+
 // ================= Countdown =================
 function tickCountdown() {
     const now = Date.now();
@@ -1141,6 +1379,12 @@ $('#logoutBtn').addEventListener('click', logout);
 $('#submitBtn').addEventListener('click', submitGuess);
 $('#resetBtn').addEventListener('click', resetAllGuesses);
 $('#adminSaveBtn').addEventListener('click', saveRealResults);
+$('#createBetBtn').addEventListener('click', createSideBet);
+document.querySelectorAll('.side-btn').forEach(b => b.addEventListener('click', () => {
+    betSide = b.dataset.side;
+    document.querySelectorAll('.side-btn').forEach(x => x.classList.toggle('active', x === b));
+}));
+populateBetPartySelect();
 $('#logoLightbox').addEventListener('click', e => { if (e.target.id === 'logoLightbox') closeLightbox(); });
 document.querySelectorAll('#tabs .tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 ['uInput', 'pInput'].forEach(id => $('#' + id).addEventListener('keydown', e => {
