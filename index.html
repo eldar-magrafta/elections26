@@ -22,9 +22,9 @@
             --teal: #0ea894;
             --ink: #10172b;
             --muted: #656f8d;
-            --paper: #f3efe3;
+            --paper: #e6f1fb;
             --card: #ffffff;
-            --line: #e7e0cc;
+            --line: #7d8be3;
             --danger: #e23b4e;
             --good: #16a34a;
             --shadow: 0 10px 28px rgba(10, 20, 60, .16);
@@ -135,6 +135,8 @@
             font: inherit; font-size: 15px; background: var(--paper); transition: border-color .15s;
         }
         .field input:focus { outline: none; border-color: var(--navy-light); box-shadow: 0 0 0 3px rgba(36,73,168,.14); }
+        .field input.invalid { border-color: var(--danger); }
+        .field input.invalid:focus { box-shadow: 0 0 0 3px rgba(226,59,78,.14); }
         .user-msg { min-height: 18px; font-size: 13px; font-weight: 700; margin: 6px 0 8px; }
         .user-msg.err { color: var(--danger); }
         .user-msg.ok { color: var(--good); }
@@ -246,7 +248,7 @@
         .submitbar {
             display: none; position: fixed; left: 0; right: 0; bottom: 0;
             padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
-            background: linear-gradient(to top, var(--paper) 55%, rgba(243,239,227,0));
+            background: linear-gradient(to top, var(--paper) 55%, rgba(230,241,251,0));
         }
         .submitbar .inner { max-width: 640px; margin: 0 auto; }
         .submit-row { display: flex; gap: 8px; }
@@ -390,7 +392,7 @@
     </header>
 
     <div class="countdown" id="countdown">
-        <div class="cd-title">זמן עד לסגירת ההגשה</div>
+        <div class="cd-title">חגיגה לדמוקרטיה בעוד:</div>
         <div class="cd-clock" id="cdClock">
             <div class="cd-seg"><b id="cdD">--</b><span>ימים</span></div>
             <div class="cd-seg"><b id="cdH">--</b><span>שעות</span></div>
@@ -841,6 +843,7 @@ async function enterApp() {
     // bleed into this one.
     setBetMsg('');
     $('#betLine').value = '';
+    $('#betLine').classList.remove('invalid');
     $('#betInvitee').value = '';
     betSide = 'over';
     document.querySelectorAll('.side-btn').forEach(b => b.classList.toggle('active', b.dataset.side === 'over'));
@@ -1262,13 +1265,18 @@ function setBetMsg(text, kind) {
     el.className = 'user-msg' + (kind ? ' ' + kind : '');
 }
 
+function isValidBetLine(line) {
+    return Number.isFinite(line) && line % 1 === 0.5 && line >= 3.5 && line <= 119.5;
+}
+
 async function createSideBet() {
     if (!currentUser || !db) return;
     const partyId = $('#betParty').value;
     const line = Number($('#betLine').value);
     const inviteeUsername = $('#betInvitee').value.trim();
-    if (!Number.isFinite(line) || line % 1 !== 0.5 || line < 3.5 || line > 119.5) {
+    if (!isValidBetLine(line)) {
         setBetMsg('הקו חייב להיות מספר וחצי (למשל 5.5), בין 3.5 ל-119.5', 'err');
+        $('#betLine').classList.add('invalid');
         return;
     }
     if (!inviteeUsername) {
@@ -1298,6 +1306,7 @@ async function createSideBet() {
         });
         setBetMsg('ההזמנה נשלחה!', 'ok');
         $('#betLine').value = '';
+        $('#betLine').classList.remove('invalid');
         $('#betInvitee').value = '';
         loadSidebets();
     } catch (_) {
@@ -1469,6 +1478,13 @@ document.querySelectorAll('.side-btn').forEach(b => b.addEventListener('click', 
     document.querySelectorAll('.side-btn').forEach(x => x.classList.toggle('active', x === b));
 }));
 populateBetPartySelect();
+$('#betLine').addEventListener('input', () => {
+    const raw = $('#betLine').value;
+    if (raw === '') { $('#betLine').classList.remove('invalid'); setBetMsg(''); return; }
+    const valid = isValidBetLine(Number(raw));
+    $('#betLine').classList.toggle('invalid', !valid);
+    setBetMsg(valid ? '' : 'הקו חייב להיות מספר וחצי (למשל 5.5), בין 3.5 ל-119.5', valid ? '' : 'err');
+});
 $('#betInvitee').addEventListener('focus', async () => {
     await ensureUsernamesLoaded();
     renderUsernameSuggestions($('#betInvitee').value);
