@@ -829,6 +829,15 @@ async function enterApp() {
     renderBoard();
     switchTab('guess');
 
+    // Same reasoning for the side-bets form: a leftover "ההזמנה נשלחה!"
+    // message or half-filled field from the previous account must not
+    // bleed into this one.
+    setBetMsg('');
+    $('#betLine').value = '';
+    $('#betInvitee').value = '';
+    betSide = 'over';
+    document.querySelectorAll('.side-btn').forEach(b => b.classList.toggle('active', b.dataset.side === 'over'));
+
     try {
         const snap = await getDoc(doc(db, 'predictions', currentUser.uid));
         if (snap.exists()) {
@@ -1326,7 +1335,6 @@ function renderBetCard(bet) {
 
     card.innerHTML = `
         <div class="bet-top">
-            <div class="badge" style="background:${party && party.logo ? '#fff' : (party ? party.color + '22' : '#eee')};color:${party ? party.color : '#999'}">${party ? badgeHtml(party) : '?'}</div>
             <div class="bet-info">
                 <div class="bet-party">${party ? party.he : 'מפלגה לא ידועה'} · קו ${bet.line}</div>
                 <div class="bet-sides">${bet.creatorName} (${sideLabel(bet.creatorSide)}) <span class="bet-vs">מול</span> ${bet.inviteeName} (${sideLabel(otherSide)})</div>
