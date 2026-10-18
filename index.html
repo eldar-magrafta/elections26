@@ -360,6 +360,17 @@
         .bet-actions button { flex: 1; padding: 8px 0; font-size: 13px; }
         .bet-actions .bet-accept { border-color: var(--teal); color: var(--teal); }
         .bet-actions .bet-decline { border-color: var(--danger); color: var(--danger); }
+
+        .suggest-wrap { position: relative; }
+        .suggest-dropdown {
+            display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+            background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            box-shadow: var(--shadow); max-height: 220px; overflow-y: auto; z-index: 40;
+        }
+        .suggest-dropdown.show { display: block; }
+        .suggest-item { padding: 9px 14px; font-size: 14px; cursor: pointer; }
+        .suggest-item:hover { background: var(--paper); }
+        .suggest-empty { padding: 9px 14px; font-size: 13px; color: var(--muted); }
     </style>
 </head>
 <body>
@@ -461,10 +472,10 @@
                     <button type="button" class="side-btn" data-side="under">אנדר</button>
                 </div>
             </div>
-            <div class="field">
+            <div class="field suggest-wrap">
                 <label for="betInvitee">שם משתמש להזמנה</label>
-                <input id="betInvitee" type="text" autocomplete="off" list="usernameSuggestions" placeholder="לדוגמה: dana123">
-                <datalist id="usernameSuggestions"></datalist>
+                <input id="betInvitee" type="text" autocomplete="off" placeholder="לדוגמה: dana123">
+                <div class="suggest-dropdown" id="betInviteeSuggest"></div>
             </div>
             <div class="user-msg" id="betMsg"></div>
             <button class="btn-primary" id="createBetBtn">שלח הזמנה</button>
@@ -864,7 +875,7 @@ function switchTab(tab) {
     $('#adminView').style.display  = tab === 'admin' ? 'block' : 'none';
     if (tab === 'all')      loadAllGuesses();
     if (tab === 'board')    loadLeaderboard();
-    if (tab === 'sidebets') { loadSidebets(); loadUsernameSuggestions(); }
+    if (tab === 'sidebets') { loadSidebets(); ensureUsernamesLoaded(); }
 }
 
 function clamp(n) { return Math.max(0, Math.min(MAX_MANDATES, Math.round(n))); }
@@ -1191,21 +1202,39 @@ function populateBetPartySelect() {
     $('#betParty').innerHTML = PARTIES.map(p => `<option value="${p.id}">${p.he}</option>`).join('');
 }
 
-let usernameSuggestionsLoaded = false;
-async function loadUsernameSuggestions() {
-    if (usernameSuggestionsLoaded || !db) return;
+let allUsernames = [];
+let usernamesLoaded = false;
+async function ensureUsernamesLoaded() {
+    if (usernamesLoaded || !db) return;
     try {
         const snaps = await getDocs(collection(db, 'usernames'));
-        const names = [];
+        allUsernames = [];
         snaps.forEach(d => {
             const u = d.data();
-            if (u && u.username) names.push(u.username);
+            if (u && u.username) allUsernames.push(u.username);
         });
-        $('#usernameSuggestions').innerHTML = names
-            .sort((a, b) => a.localeCompare(b, 'he'))
-            .map(n => `<option value="${n}"></option>`).join('');
-        usernameSuggestionsLoaded = true;
+        allUsernames.sort((a, b) => a.localeCompare(b, 'he'));
+        usernamesLoaded = true;
     } catch (_) { /* offline / not readable yet — invite still works, just without suggestions */ }
+}
+
+// Shows up to 10 usernames: the first 10 registered when the field is empty,
+// narrowing down to substring matches as the user types.
+function renderUsernameSuggestions(filterText) {
+    const dd = $('#betInviteeSuggest');
+    const q = (filterText || '').trim().toLowerCase();
+    const matches = (q ? allUsernames.filter(n => n.toLowerCase().includes(q)) : allUsernames).slice(0, 10);
+    if (!matches.length) {
+        dd.innerHTML = '<div class="suggest-empty">אין משתמשים תואמים</div>';
+        dd.classList.add('show');
+        return;
+    }
+    dd.innerHTML = matches.map(n => `<div class="suggest-item">${n}</div>`).join('');
+    dd.querySelectorAll('.suggest-item').forEach(el => el.addEventListener('click', () => {
+        $('#betInvitee').value = el.textContent;
+        dd.classList.remove('show');
+    }));
+    dd.classList.add('show');
 }
 
 function setBetMsg(text, kind) {
@@ -1403,6 +1432,16 @@ document.querySelectorAll('.side-btn').forEach(b => b.addEventListener('click', 
     document.querySelectorAll('.side-btn').forEach(x => x.classList.toggle('active', x === b));
 }));
 populateBetPartySelect();
+$('#betInvitee').addEventListener('focus', async () => {
+    await ensureUsernamesLoaded();
+    renderUsernameSuggestions($('#betInvitee').value);
+});
+$('#betInvitee').addEventListener('input', () => renderUsernameSuggestions($('#betInvitee').value));
+document.addEventListener('click', e => {
+    if (!e.target.closest('#betInvitee') && !e.target.closest('#betInviteeSuggest')) {
+        $('#betInviteeSuggest').classList.remove('show');
+    }
+});
 $('#logoLightbox').addEventListener('click', e => { if (e.target.id === 'logoLightbox') closeLightbox(); });
 document.querySelectorAll('#tabs .tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 ['uInput', 'pInput'].forEach(id => $('#' + id).addEventListener('keydown', e => {
