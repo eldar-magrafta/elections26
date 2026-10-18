@@ -9,23 +9,27 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
     <style>
         :root {
-            --navy: #1a3a6b;
-            --navy-dark: #10264a;
-            --navy-light: #2a5296;
-            --gold: #e3b23c;
-            --ink: #14202e;
-            --muted: #5c6878;
-            --paper: #f3f5f8;
+            --navy: #122148;
+            --navy-dark: #080f24;
+            --navy-light: #2449a8;
+            --gold: #ffb703;
+            --gold-light: #ffd666;
+            --teal: #0ea894;
+            --ink: #10172b;
+            --muted: #656f8d;
+            --paper: #f3efe3;
             --card: #ffffff;
-            --line: #e1e6ec;
-            --danger: #d64545;
-            --good: #1f9d57;
-            --shadow: 0 6px 22px rgba(16, 38, 74, .12);
+            --line: #e7e0cc;
+            --danger: #e23b4e;
+            --good: #16a34a;
+            --shadow: 0 10px 28px rgba(10, 20, 60, .16);
+            --shadow-sm: 0 4px 14px rgba(10, 20, 60, .1);
+            --num-font: 'Fredoka', 'Rubik', sans-serif;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -35,7 +39,8 @@
         body {
             font-family: 'Assistant', 'Rubik', system-ui, sans-serif;
             background:
-                radial-gradient(1200px 500px at 50% -10%, rgba(42,82,150,.16), transparent 60%),
+                radial-gradient(1000px 460px at 50% -10%, rgba(36, 73, 168, .20), transparent 60%),
+                radial-gradient(circle, rgba(18, 33, 72, .05) 1.4px, transparent 1.4px) 0 0 / 18px 18px,
                 var(--paper);
             color: var(--ink);
             min-height: 100vh;
@@ -46,111 +51,160 @@
         .wrap {
             max-width: 640px;
             margin: 0 auto;
-            padding: 20px 16px calc(120px + env(safe-area-inset-bottom, 0px));
+            padding: 20px 16px calc(130px + env(safe-area-inset-bottom, 0px));
         }
 
-        header.app { text-align: center; padding: 22px 0 10px; }
+        header.app { text-align: center; padding: 22px 0 6px; }
         .crest {
-            width: 76px; height: 76px; margin: 0 auto 8px;
-            display: grid; place-items: center;
-            background: linear-gradient(160deg, var(--navy-light), var(--navy-dark));
-            border-radius: 20px; box-shadow: var(--shadow);
+            width: 78px; height: 78px; margin: 0 auto 10px;
+            display: grid; place-items: center; position: relative;
+            background: radial-gradient(circle at 32% 28%, var(--navy-light), var(--navy-dark) 72%);
+            border-radius: 50%; box-shadow: var(--shadow), inset 0 0 0 3px rgba(255,183,3,.9), inset 0 -6px 10px rgba(0,0,0,.25);
         }
-        .crest svg { width: 36px; height: 36px; fill: var(--gold); }
-        header.app h1 { font-size: clamp(22px, 6vw, 30px); font-weight: 800; margin: 6px 0 2px; letter-spacing: -.02em; }
-        header.app p { margin: 0; color: var(--muted); font-weight: 500; font-size: 15px; }
+        .crest svg { width: 34px; height: 34px; fill: var(--gold-light); filter: drop-shadow(0 1px 1px rgba(0,0,0,.3)); }
+        header.app h1 {
+            font-size: clamp(22px, 6vw, 30px); font-weight: 800; margin: 4px 0 4px; letter-spacing: -.02em;
+            position: relative; display: inline-block;
+        }
+        header.app h1::after {
+            content: ''; display: block; width: 56px; height: 4px; margin: 7px auto 0; border-radius: 4px;
+            background: linear-gradient(90deg, var(--gold), var(--teal));
+        }
+        header.app p { margin: 10px 0 0; color: var(--muted); font-weight: 600; font-size: 15px; }
 
         .countdown {
-            background: linear-gradient(160deg, var(--navy-light), var(--navy-dark));
-            color: #fff; border-radius: 20px; padding: 16px 14px 14px; margin: 14px 0 4px;
-            text-align: center; box-shadow: var(--shadow);
+            background:
+                repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 10px, transparent 10px 20px),
+                linear-gradient(160deg, var(--navy-light), var(--navy-dark));
+            color: #fff; border-radius: 20px; padding: 16px 14px 14px; margin: 16px 0 4px;
+            text-align: center; box-shadow: var(--shadow); position: relative; overflow: hidden;
+            border: 1px solid rgba(255,183,3,.25);
         }
-        .cd-title { font-size: 14px; font-weight: 600; opacity: .92; margin-bottom: 10px; }
+        .cd-title { font-size: 13px; font-weight: 700; letter-spacing: .03em; opacity: .85; margin-bottom: 10px; text-transform: uppercase; }
         .cd-clock { display: flex; justify-content: center; gap: 8px; direction: ltr; }
-        .cd-seg { background: rgba(255,255,255,.14); border-radius: 12px; padding: 8px 4px 6px; min-width: 62px; backdrop-filter: blur(2px); }
-        .cd-seg b { display: block; font-size: 26px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-        .cd-seg span { font-size: 11px; opacity: .85; }
+        .cd-seg {
+            background: rgba(0,0,0,.28); border-radius: 12px; padding: 9px 4px 7px; min-width: 62px;
+            box-shadow: inset 0 0 0 1px rgba(255,183,3,.25), inset 0 2px 6px rgba(0,0,0,.3);
+        }
+        .cd-seg b {
+            display: block; font-family: var(--num-font); font-size: 27px; font-weight: 700; line-height: 1;
+            font-variant-numeric: tabular-nums; color: var(--gold-light); text-shadow: 0 0 10px rgba(255,183,3,.5);
+        }
+        .cd-seg span { font-size: 10.5px; opacity: .8; letter-spacing: .02em; }
         .cd-deadline { font-size: 12px; opacity: .8; margin-top: 10px; }
-        .countdown.closed { background: linear-gradient(160deg, #b23b3b, #8a2626); }
-        .cd-clock.done { font-size: 20px; font-weight: 800; padding: 6px 0; }
+        .countdown.closed { background: linear-gradient(160deg, #d64551, #7a1620); border-color: rgba(255,255,255,.2); }
+        .cd-clock.done { font-size: 20px; font-weight: 800; padding: 6px 0; animation: pulse-soft 1.8s ease-in-out infinite; }
+        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
 
         .userbar {
             display: none; align-items: center; gap: 10px;
             background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-            padding: 8px 12px; margin: 14px 0; box-shadow: var(--shadow);
+            padding: 8px 12px; margin: 14px 0; box-shadow: var(--shadow-sm);
         }
         .userbar .who { flex: 1; min-width: 0; }
         .userbar .who b { display: block; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .userbar .who span { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .btn-ghost {
             border: 1px solid var(--line); background: #fff; color: var(--muted);
-            border-radius: 12px; padding: 8px 12px; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer;
+            border-radius: 12px; padding: 8px 12px; font: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
+            transition: transform .15s, border-color .15s;
         }
-        .btn-ghost:active { transform: scale(.97); }
+        .btn-ghost:hover { border-color: var(--navy-light); color: var(--navy); }
+        .btn-ghost:active { transform: scale(.96); }
 
-        .login { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 28px 22px; text-align: center; box-shadow: var(--shadow); }
+        .login {
+            background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px 22px 26px;
+            text-align: center; box-shadow: var(--shadow); position: relative; overflow: hidden;
+        }
+        .login::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+            background: linear-gradient(90deg, var(--gold), var(--teal), var(--navy-light));
+        }
         .login h2 { margin: 0 0 6px; font-size: 19px; font-weight: 800; }
         .login p.sub { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
         .login-tabs { display: flex; gap: 6px; background: var(--paper); border-radius: 14px; padding: 4px; margin-bottom: 16px; }
         .login-tabs button {
             flex: 1; border: 0; background: transparent; padding: 9px 0; border-radius: 11px;
-            font: inherit; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer;
+            font: inherit; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; transition: all .15s;
         }
-        .login-tabs button.active { background: var(--card); color: var(--navy); box-shadow: 0 2px 8px rgba(16,38,74,.1); }
+        .login-tabs button.active { background: var(--card); color: var(--navy); box-shadow: var(--shadow-sm); }
         .field { text-align: right; margin-bottom: 12px; }
-        .field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+        .field label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 5px; }
         .field input {
-            width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 12px;
-            font: inherit; font-size: 15px; background: var(--paper);
+            width: 100%; padding: 11px 14px; border: 1.5px solid var(--line); border-radius: 12px;
+            font: inherit; font-size: 15px; background: var(--paper); transition: border-color .15s;
         }
-        .field input:focus { outline: 2px solid var(--navy-light); outline-offset: 1px; }
-        .user-msg { min-height: 18px; font-size: 13px; font-weight: 600; margin: 6px 0 8px; }
+        .field input:focus { outline: none; border-color: var(--navy-light); box-shadow: 0 0 0 3px rgba(36,73,168,.14); }
+        .user-msg { min-height: 18px; font-size: 13px; font-weight: 700; margin: 6px 0 8px; }
         .user-msg.err { color: var(--danger); }
         .user-msg.ok { color: var(--good); }
         .btn-primary {
-            width: 100%; border: 0; background: linear-gradient(160deg, var(--navy-light), var(--navy-dark));
+            width: 100%; border: 0; border-bottom: 3px solid rgba(0,0,0,.22);
+            background: linear-gradient(160deg, var(--navy-light), var(--navy));
             color: #fff; padding: 13px 0; border-radius: 14px; font: inherit; font-weight: 800; font-size: 15px;
-            cursor: pointer; box-shadow: var(--shadow);
+            cursor: pointer; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: transform .15s;
         }
-        .btn-primary:disabled { opacity: .6; cursor: default; }
-        .btn-primary:active { transform: scale(.98); }
+        .btn-primary:disabled { opacity: .55; cursor: default; }
+        .btn-primary:active:not(:disabled) { transform: scale(.98) translateY(1px); }
+        .btn-primary:not(:disabled):hover { filter: brightness(1.08); }
         .config-warn {
             display: none; background: #fff4e5; border: 1px solid #f3cf8f; color: #8a5a00;
             border-radius: 12px; padding: 10px 12px; font-size: 13px; margin-bottom: 14px; text-align: right;
         }
         .config-warn code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 6px; }
 
-        .tabs { display: none; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 5px; margin: 14px 0; box-shadow: var(--shadow); }
-        .tab { flex: 1; border: 0; background: transparent; padding: 10px 2px; border-radius: 12px; font: inherit; font-weight: 700; font-size: 12.5px; color: var(--muted); cursor: pointer; white-space: nowrap; }
-        .tab.active { background: linear-gradient(160deg, var(--navy-light), var(--navy-dark)); color: #fff; }
+        .tabs {
+            display: none; gap: 5px; background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+            padding: 5px; margin: 14px 0; box-shadow: var(--shadow-sm);
+        }
+        .tab {
+            flex: 1; border: 0; background: transparent; padding: 10px 2px; border-radius: 12px;
+            font: inherit; font-weight: 700; font-size: 12.5px; color: var(--muted); cursor: pointer; white-space: nowrap;
+            position: relative; transition: color .15s;
+        }
+        .tab.active { background: linear-gradient(160deg, var(--navy-light), var(--navy)); color: #fff; }
+        .tab.active::after {
+            content: ''; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+            width: 60%; height: 3px; background: var(--gold); border-radius: 3px;
+        }
 
         .totalbar {
             display: flex; align-items: center; justify-content: space-between; gap: 10px;
             background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px;
-            margin-bottom: 10px; box-shadow: var(--shadow);
+            margin-bottom: 10px; box-shadow: var(--shadow-sm);
         }
         .totalbar .lbl { font-size: 13px; font-weight: 700; color: var(--muted); }
-        .totalbar .val { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .totalbar .val { font-family: var(--num-font); font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--navy); }
         .totalbar .val.ok { color: var(--good); }
         .totalbar .val.bad { color: var(--danger); }
         .totalbar .hint { font-size: 12px; color: var(--muted); }
 
         .chart-card {
             background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-            padding: 10px 6px 2px; margin-bottom: 10px; box-shadow: var(--shadow);
+            padding: 4px 6px 2px; margin-bottom: 10px; box-shadow: var(--shadow-sm);
+            background-image: radial-gradient(circle, var(--paper) 2.5px, transparent 2.5px);
+            background-size: 16px 100%; background-repeat: repeat-x; background-position: top;
+        }
+        .chart-card-title {
+            text-align: center; font-size: 13px; font-weight: 700; color: var(--muted);
+            padding: 10px 0 2px; letter-spacing: .01em;
         }
 
         #board { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
         .prow {
             display: flex; align-items: center; gap: 10px; background: var(--card);
-            border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; box-shadow: var(--shadow);
+            border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px 10px 14px; box-shadow: var(--shadow-sm);
+            border-right: 5px solid var(--line); transition: box-shadow .15s;
         }
+        .prow:hover { box-shadow: var(--shadow); }
         .prow .badge {
-            width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
-            font-weight: 800; font-size: 13px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--line);
+            width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+            font-family: var(--num-font); font-weight: 700; font-size: 13px; flex-shrink: 0; overflow: hidden;
+            border: 2px solid var(--line); transition: transform .15s, border-color .15s;
         }
         .prow .badge img { width: 100%; height: 100%; object-fit: contain; }
         .prow .badge.has-logo { cursor: pointer; }
+        .prow .badge.has-logo:hover { transform: scale(1.08); border-color: var(--gold); }
 
         .logo-preview {
             position: fixed; z-index: 60; display: none; background: var(--card);
@@ -160,7 +214,7 @@
         .logo-preview img { display: block; width: 160px; height: 160px; object-fit: contain; }
 
         .lightbox {
-            position: fixed; inset: 0; background: rgba(10, 15, 25, .78);
+            position: fixed; inset: 0; background: rgba(8, 15, 36, .82);
             display: none; align-items: center; justify-content: center; z-index: 70; padding: 30px;
         }
         .lightbox.show { display: flex; }
@@ -172,24 +226,38 @@
         .prow .name b { display: block; font-size: 14px; font-weight: 700; line-height: 1.25; }
         .prow .name span { display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px; }
         .prow .num {
-            width: 54px; text-align: center; padding: 8px 2px; border: 1px solid var(--line);
-            border-radius: 10px; font: inherit; font-weight: 800; font-size: 16px; background: var(--paper);
+            width: 54px; text-align: center; padding: 8px 2px; border: 1.5px solid var(--line);
+            border-radius: 10px; font: inherit; font-family: var(--num-font); font-weight: 700; font-size: 16px;
+            background: var(--paper); color: var(--navy);
         }
+        .prow .num:focus { outline: none; border-color: var(--navy-light); }
         .prow input[type="range"] {
-            width: 172px; accent-color: var(--navy-light); flex-shrink: 0;
+            width: 172px; accent-color: var(--teal); flex-shrink: 0; height: 20px;
         }
         .prow.locked .num, .prow.locked input[type="range"] { opacity: .55; pointer-events: none; }
 
-        .submitbar { display: none; position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, rgba(243,245,248,1) 60%, rgba(243,245,248,0)); }
+        .submitbar {
+            display: none; position: fixed; left: 0; right: 0; bottom: 0;
+            padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+            background: linear-gradient(to top, var(--paper) 55%, rgba(243,239,227,0));
+        }
         .submitbar .inner { max-width: 640px; margin: 0 auto; }
         .submit-row { display: flex; gap: 8px; }
-        .submitbar button { border: 0; background: linear-gradient(160deg, var(--navy-light), var(--navy-dark)); color: #fff; padding: 15px 0; border-radius: 16px; font: inherit; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .submitbar button {
+            border: 0; border-bottom: 3px solid rgba(0,0,0,.22);
+            background: linear-gradient(160deg, var(--navy-light), var(--navy));
+            color: #fff; padding: 15px 0; border-radius: 16px; font: inherit; font-weight: 800; font-size: 16px;
+            cursor: pointer; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center;
+            gap: 8px; transition: transform .15s, filter .15s;
+        }
+        .submitbar button:not(:disabled):hover { filter: brightness(1.08); }
         .submit-row #submitBtn { flex: 9; }
         .submit-row #resetBtn {
-            flex: 1; background: #fff; color: var(--navy-dark); border: 1px solid var(--line);
-            box-shadow: none; font-size: 13px; font-weight: 700; padding: 15px 2px;
+            flex: 1; background: #fff; color: var(--navy); border: 1.5px solid var(--line); border-bottom: 1.5px solid var(--line);
+            box-shadow: var(--shadow-sm); font-size: 13px; font-weight: 700; padding: 15px 2px;
         }
-        .submitbar button:disabled { opacity: .6; }
+        .submitbar button:disabled { opacity: .55; }
+        .submitbar button:active:not(:disabled) { transform: scale(.98) translateY(1px); }
         .save-hint { text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
         .spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: spin .7s linear infinite; display: inline-block; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -197,12 +265,18 @@
         .lb-loading, .lb-empty, .all-locked { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
         .all-locked .lock { font-size: 30px; display: block; margin-bottom: 10px; }
 
-        .lb-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); }
+        .lb-card {
+            background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
+            margin-bottom: 8px; box-shadow: var(--shadow-sm); transition: box-shadow .15s;
+        }
         .lb-card .top { display: flex; align-items: center; gap: 10px; }
-        .lb-card .rank { width: 28px; height: 28px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-weight: 800; font-size: 13px; flex-shrink: 0; }
-        .lb-card.me { border-color: var(--navy-light); }
+        .lb-card .rank {
+            width: 30px; height: 30px; border-radius: 50%; background: var(--paper); display: grid; place-items: center;
+            font-family: var(--num-font); font-weight: 700; font-size: 13.5px; flex-shrink: 0; border: 1.5px solid var(--line);
+        }
+        .lb-card.me { border: 2px solid var(--gold); box-shadow: var(--shadow); }
         .lb-card .name { flex: 1; font-weight: 700; font-size: 14.5px; }
-        .lb-card .score { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+        .lb-card .score { font-family: var(--num-font); font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
         .lb-card .score.good { color: var(--good); }
         .lb-card .score.bad { color: var(--danger); }
         .lb-card .detail { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; font-size: 11.5px; }
@@ -219,18 +293,38 @@
         }
         .sb-row:first-child { border-top: 1px solid var(--line); margin-top: 8px; }
         .sb-name { flex: 1; min-width: 0; font-weight: 600; }
-        .sb-nums { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
-        .sb-pts { font-weight: 800; min-width: 28px; text-align: left; }
+        .sb-nums { color: var(--muted); font-size: 11.5px; white-space: nowrap; font-family: var(--num-font); }
+        .sb-pts { font-family: var(--num-font); font-weight: 700; min-width: 28px; text-align: left; }
         .sb-pts.good { color: var(--good); }
         .sb-pts.bad { color: var(--danger); }
 
-        .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 50; max-width: 90vw; text-align: center; }
-        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast {
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(10px) scale(.95);
+            background: var(--navy); color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 13px;
+            font-weight: 700; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 50;
+            max-width: 90vw; text-align: center; box-shadow: var(--shadow);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
         .toast.err { background: var(--danger); }
 
-        .howto { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin: 14px 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+        .howto {
+            background: var(--card); border: 1px dashed var(--line); border-radius: 16px; padding: 14px 16px;
+            margin: 14px 0; font-size: 13px; color: var(--muted); line-height: 1.6; box-shadow: var(--shadow-sm);
+        }
         .howto b { color: var(--ink); }
         footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 6px; }
+
+        .login-spinner-overlay {
+            position: fixed; inset: 0; background: rgba(8, 15, 36, .6); backdrop-filter: blur(2px);
+            display: none; align-items: center; justify-content: center; z-index: 90;
+        }
+        .login-spinner-overlay.show { display: flex; }
+        .login-spinner-img {
+            width: 120px; height: 120px; object-fit: contain;
+            animation: spin-fast .5s linear infinite;
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,.45));
+        }
+        @keyframes spin-fast { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -240,7 +334,6 @@
             <svg viewBox="0 0 24 24"><path d="M12 2 2 7v2h20V7L12 2Zm-7 9v8H3v2h18v-2h-2v-8h-2v8h-3v-8h-2v8h-3v-8H5Z"/></svg>
         </div>
         <h1>ניחושי בחירות 2026</h1>
-        <p>כמה מנדטים כל מפלגה תקבל, לדעתכם?</p>
     </header>
 
     <div class="countdown" id="countdown">
@@ -261,7 +354,6 @@
     </div>
 
     <div class="login" id="loginCard">
-        <h2>כניסה לניחוש</h2>
         <div class="config-warn" id="configWarn"></div>
         <div class="login-tabs">
             <button id="loginModeBtn" class="active" data-mode="login">כניסה</button>
@@ -269,7 +361,7 @@
         </div>
         <div class="field">
             <label for="uInput">שם משתמש</label>
-            <input id="uInput" type="text" autocomplete="username" placeholder="לדוגמה: dana123">
+            <input id="uInput" type="text" autocomplete="username" placeholder="לדוגמה: shadmor">
         </div>
         <div class="field">
             <label for="pInput">סיסמה</label>
@@ -289,6 +381,7 @@
 
     <div id="guessView" style="display:none">
         <div class="chart-card">
+            <div class="chart-card-title">🎯 התפלגות המנדטים שלכם</div>
             <div id="mandateChart"></div>
         </div>
         <div class="totalbar">
@@ -342,6 +435,10 @@
 
 <div class="lightbox" id="logoLightbox">
     <img id="lightboxImg" alt="">
+</div>
+
+<div class="login-spinner-overlay" id="loginSpinnerOverlay">
+    <img src="assets/sdsssd2_w.png" alt="" class="login-spinner-img">
 </div>
 
 <script>
@@ -504,9 +601,23 @@ function initFirebase() {
 
     onAuthStateChanged(auth, user => {
         currentUser = user;
-        if (user) enterApp();
+        if (user) runWithSpinner(enterApp(), 2000);
         else showLogin();
     });
+}
+
+// The spinner wheel is a real loading indicator, not just decoration: it
+// stays up for as long as the wrapped operation actually takes. On login
+// we additionally guarantee a 2s minimum so fast connections still get a
+// satisfying spin — but on a slow connection it keeps spinning for however
+// long the real Firebase round-trip genuinely needs.
+function showSpinner() { $('#loginSpinnerOverlay').classList.add('show'); }
+function hideSpinner() { $('#loginSpinnerOverlay').classList.remove('show'); }
+function runWithSpinner(promise, minMs = 0) {
+    showSpinner();
+    const waits = [promise];
+    if (minMs) waits.push(new Promise(r => setTimeout(r, minMs)));
+    return Promise.all(waits).finally(hideSpinner);
 }
 
 async function logout() {
@@ -762,6 +873,7 @@ function renderBoard() {
         const li = document.createElement('li');
         li.className = 'prow';
         li.dataset.id = p.id;
+        li.style.borderRightColor = p.color;
         li.innerHTML = `
             <div class="badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</div>
             <div class="name"><b>${p.he}</b></div>
@@ -792,6 +904,7 @@ async function submitGuess() {
     if (locked) { toast('ההגשה נסגרה — המועד האחרון עבר', true); return; }
     if (totalGuessed() !== MAX_MANDATES) { toast('צריך לחלק בדיוק 120 מנדטים לפני השמירה', true); return; }
     setSubmitting(true);
+    showSpinner();
     try {
         await setDoc(doc(db, 'predictions', currentUser.uid), {
             uid: currentUser.uid,
@@ -807,6 +920,7 @@ async function submitGuess() {
         toast('שמירה נכשלה, נסו שוב', true);
     } finally {
         setSubmitting(false);
+        hideSpinner();
     }
 }
 
@@ -824,6 +938,7 @@ function renderAdminBoard() {
         const li = document.createElement('li');
         li.className = 'prow';
         li.dataset.id = p.id;
+        li.style.borderRightColor = p.color;
         li.innerHTML = `
             <div class="badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</div>
             <div class="name"><b>${p.he}</b></div>
@@ -839,6 +954,7 @@ async function saveRealResults() {
     if (!currentUser || currentUser.email !== ADMIN_EMAIL) return;
     const btn = $('#adminSaveBtn');
     btn.disabled = true;
+    showSpinner();
     try {
         await setDoc(doc(db, 'meta', 'results'), {
             season: SEASON,
@@ -851,6 +967,7 @@ async function saveRealResults() {
         toast('שמירה נכשלה, נסו שוב', true);
     } finally {
         btn.disabled = false;
+        hideSpinner();
     }
 }
 
@@ -870,6 +987,7 @@ async function loadAllGuesses() {
 
     status.innerHTML = 'ההגשה נסגרה — כל הניחושים חשופים';
     list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    showSpinner();
     try {
         const snaps = await getDocs(collection(db, 'predictions'));
         const players = [];
@@ -898,6 +1016,8 @@ async function loadAllGuesses() {
         });
     } catch (_) {
         list.innerHTML = '<div class="lb-empty">טעינה נכשלה.</div>';
+    } finally {
+        hideSpinner();
     }
 }
 
@@ -948,6 +1068,7 @@ async function loadLeaderboard() {
 
     status.innerHTML = 'מחושב מול תוצאות הבחירות האמיתיות';
     list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    showSpinner();
     try {
         const snaps = await getDocs(collection(db, 'predictions'));
         const players = [];
@@ -965,9 +1086,10 @@ async function loadLeaderboard() {
         players.forEach((pl, i) => {
             const card = document.createElement('div');
             card.className = 'lb-card expandable' + (pl.uid === currentUser.uid ? ' me' : '');
+            const medal = ['🥇', '🥈', '🥉'][i] || (i + 1);
             card.innerHTML = `
                 <div class="top">
-                    <div class="rank">${i + 1}</div>
+                    <div class="rank">${medal}</div>
                     <div class="name">${pl.name}</div>
                     <div class="score ${i === 0 ? 'good' : ''}">${pl.score}</div>
                     <div class="sb-chevron">▾</div>
@@ -978,6 +1100,8 @@ async function loadLeaderboard() {
         });
     } catch (_) {
         list.innerHTML = '<div class="lb-empty">טעינה נכשלה.</div>';
+    } finally {
+        hideSpinner();
     }
 }
 
