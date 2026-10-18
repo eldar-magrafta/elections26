@@ -359,20 +359,20 @@ const PALETTE = [
     '#5d4037', '#283593', '#ad1457', '#00838f', '#827717', '#4527a0'
 ];
 const RAW_PARTIES = [
-    ['אמת', 'הדמוקרטים בראשות יאיר גולן'],
-    ['ב', 'עוצמה יהודית בראשות איתמר בן גביר'],
-    ['ג', 'יהדות התורה והשבת אגודת ישראל – דגל התורה'],
-    ['די', 'המילואימניקים והכלכלית בראשות יועז הנדל וירון זליכה'],
-    ['דרך', 'ישר! עם איזנקוט לראשות הממשלה מאחדים את ישראל'],
-    ['ודם', 'הרשימה המשותפת'],
-    ['ט', 'הציונות הדתית בראשות בצלאל סמוטריץ\' וזהות בראשות משה פייגלין'],
-    ['ך', 'עמך ישראל בראשות עופר וינטר'],
-    ['כן', 'כחול לבן בראשות בני גנץ'],
-    ['ל', 'ישראל ביתנו בראשות אביגדור ליברמן'],
-    ['מחל', 'הליכוד בהנהגת בנימין נתניהו לראשות הממשלה'],
-    ['עם', 'רע"ם – הרשימה הערבית המאוחדת'],
-    ['רק', 'ביחד בראשות נפתלי בנט'],
-    ['שס', 'התאחדות הספרדים שומרי תורה תנועתו של מרן הרב עובדיה יוסף זצ"ל']
+    ['אמת', 'הדמוקרטים - יאיר גולן'],
+    ['ב', 'עוצמה יהודית - איתמר בן גביר'],
+    ['ג', 'יהדות התורה - מי שזה לא יהיה...'],
+    ['די', 'המילואימניקים - יועז הנדל וירון זליכה'],
+    ['דרך', 'ישר - גדי איזנקוט'],
+    ['ודם', 'הרשימה המשותפת - איימן עודה'],
+    ['ט', 'הציונות הדתית - בצלאל סמוטריץ\''],
+    ['ך', 'עמך ישראל - עופר וינטר'],
+    ['כן', 'כחול לבן - בני גנץ'],
+    ['ל', 'ישראל ביתנו - אביגדור ליברמן'],
+    ['מחל', 'הליכוד - בנימין נתניהו'],
+    ['עם', 'רע"ם - מנסור עבאס'],
+    ['רק', 'ביחד - נפתלי בנט'],
+    ['שס', 'ש"ס - אריה דרעי']
 ];
 const PARTIES = RAW_PARTIES.map(([ot, he], i) => ({
     id: ot, ot, he, color: PALETTE[i % PALETTE.length]
@@ -661,7 +661,7 @@ function renderBoard() {
         li.dataset.id = p.id;
         li.innerHTML = `
             <div class="badge" style="background:${p.color}22;color:${p.color}">${p.ot}</div>
-            <div class="name"><b>${p.he}</b><span>אות ${p.ot}</span></div>
+            <div class="name"><b>${p.he}</b></div>
             <input type="range" min="0" max="${MAX_MANDATES}" step="1" value="${guess[p.id]}">
             <input type="number" class="num" min="0" max="${MAX_MANDATES}" step="1" value="${guess[p.id]}">`;
         const range = li.querySelector('input[type="range"]');
@@ -720,7 +720,7 @@ function renderAdminBoard() {
         li.dataset.id = p.id;
         li.innerHTML = `
             <div class="badge" style="background:${p.color}22;color:${p.color}">${p.ot}</div>
-            <div class="name"><b>${p.he}</b><span>אות ${p.ot}</span></div>
+            <div class="name"><b>${p.he}</b></div>
             <input type="number" class="num" min="0" max="${MAX_MANDATES}" step="1" value="${realResults[p.id]}">`;
         const num = li.querySelector('input[type="number"]');
         num.addEventListener('input', () => { realResults[p.id] = clamp(Number(num.value) || 0); });
