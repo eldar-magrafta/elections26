@@ -888,9 +888,9 @@ async function loadAllGuesses() {
             const card = document.createElement('div');
             card.className = 'lb-card' + (pl.uid === currentUser.uid ? ' me' : '');
             const chips = PARTIES
-                .filter(p => Number(pl.mandates[p.id]) > 0)
+                .slice()
                 .sort((a, b) => Number(pl.mandates[b.id]) - Number(pl.mandates[a.id]))
-                .map(p => `<span class="chip">${p.he}: ${Number(pl.mandates[p.id])}</span>`).join('');
+                .map(p => `<span class="chip">${p.he}: ${Number(pl.mandates[p.id]) || 0}</span>`).join('');
             card.innerHTML = `
                 <div class="top"><div class="name">${pl.name}</div></div>
                 <div class="detail">${chips || '<span class="chip">אין ניחוש</span>'}</div>`;
