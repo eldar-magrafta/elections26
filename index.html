@@ -904,7 +904,6 @@ async function submitGuess() {
     if (locked) { toast('ההגשה נסגרה — המועד האחרון עבר', true); return; }
     if (totalGuessed() !== MAX_MANDATES) { toast('צריך לחלק בדיוק 120 מנדטים לפני השמירה', true); return; }
     setSubmitting(true);
-    showSpinner();
     try {
         await setDoc(doc(db, 'predictions', currentUser.uid), {
             uid: currentUser.uid,
@@ -920,7 +919,6 @@ async function submitGuess() {
         toast('שמירה נכשלה, נסו שוב', true);
     } finally {
         setSubmitting(false);
-        hideSpinner();
     }
 }
 
@@ -954,7 +952,6 @@ async function saveRealResults() {
     if (!currentUser || currentUser.email !== ADMIN_EMAIL) return;
     const btn = $('#adminSaveBtn');
     btn.disabled = true;
-    showSpinner();
     try {
         await setDoc(doc(db, 'meta', 'results'), {
             season: SEASON,
@@ -967,7 +964,6 @@ async function saveRealResults() {
         toast('שמירה נכשלה, נסו שוב', true);
     } finally {
         btn.disabled = false;
-        hideSpinner();
     }
 }
 
