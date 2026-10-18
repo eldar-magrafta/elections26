@@ -451,8 +451,8 @@
                 <select id="betParty"></select>
             </div>
             <div class="field">
-                <label for="betLine">קו (לדוגמה 5.5)</label>
-                <input id="betLine" type="number" step="0.5" min="0" max="120" placeholder="5.5">
+                <label for="betLine">קו (מספר וחצי, לדוגמה 5.5. מינימום 3.5)</label>
+                <input id="betLine" type="number" step="1" min="3.5" max="119.5" placeholder="5.5">
             </div>
             <div class="field">
                 <label>הצד שלי</label>
@@ -463,7 +463,8 @@
             </div>
             <div class="field">
                 <label for="betInvitee">שם משתמש להזמנה</label>
-                <input id="betInvitee" type="text" autocomplete="off" placeholder="לדוגמה: dana123">
+                <input id="betInvitee" type="text" autocomplete="off" list="usernameSuggestions" placeholder="לדוגמה: dana123">
+                <datalist id="usernameSuggestions"></datalist>
             </div>
             <div class="user-msg" id="betMsg"></div>
             <button class="btn-primary" id="createBetBtn">שלח הזמנה</button>
@@ -863,7 +864,7 @@ function switchTab(tab) {
     $('#adminView').style.display  = tab === 'admin' ? 'block' : 'none';
     if (tab === 'all')      loadAllGuesses();
     if (tab === 'board')    loadLeaderboard();
-    if (tab === 'sidebets') loadSidebets();
+    if (tab === 'sidebets') { loadSidebets(); loadUsernameSuggestions(); }
 }
 
 function clamp(n) { return Math.max(0, Math.min(MAX_MANDATES, Math.round(n))); }
@@ -1190,6 +1191,23 @@ function populateBetPartySelect() {
     $('#betParty').innerHTML = PARTIES.map(p => `<option value="${p.id}">${p.he}</option>`).join('');
 }
 
+let usernameSuggestionsLoaded = false;
+async function loadUsernameSuggestions() {
+    if (usernameSuggestionsLoaded || !db) return;
+    try {
+        const snaps = await getDocs(collection(db, 'usernames'));
+        const names = [];
+        snaps.forEach(d => {
+            const u = d.data();
+            if (u && u.username) names.push(u.username);
+        });
+        $('#usernameSuggestions').innerHTML = names
+            .sort((a, b) => a.localeCompare(b, 'he'))
+            .map(n => `<option value="${n}"></option>`).join('');
+        usernameSuggestionsLoaded = true;
+    } catch (_) { /* offline / not readable yet — invite still works, just without suggestions */ }
+}
+
 function setBetMsg(text, kind) {
     const el = $('#betMsg');
     el.textContent = text || '';
@@ -1201,8 +1219,8 @@ async function createSideBet() {
     const partyId = $('#betParty').value;
     const line = Number($('#betLine').value);
     const inviteeUsername = $('#betInvitee').value.trim();
-    if (!Number.isFinite(line) || line <= 0 || line > MAX_MANDATES) {
-        setBetMsg('יש להזין קו תקין (למשל 5.5)', 'err');
+    if (!Number.isFinite(line) || line % 1 !== 0.5 || line < 3.5 || line > 119.5) {
+        setBetMsg('הקו חייב להיות מספר וחצי (למשל 5.5), בין 3.5 ל-119.5', 'err');
         return;
     }
     if (!inviteeUsername) {
