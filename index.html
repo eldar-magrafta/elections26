@@ -147,7 +147,26 @@
         }
         .prow .badge {
             width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
-            font-weight: 800; font-size: 13px; flex-shrink: 0;
+            font-weight: 800; font-size: 13px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--line);
+        }
+        .prow .badge img { width: 100%; height: 100%; object-fit: contain; }
+        .prow .badge.has-logo { cursor: pointer; }
+
+        .logo-preview {
+            position: fixed; z-index: 60; display: none; background: var(--card);
+            border-radius: 14px; padding: 10px; box-shadow: 0 16px 40px rgba(0,0,0,.25);
+            pointer-events: none; border: 1px solid var(--line);
+        }
+        .logo-preview img { display: block; width: 160px; height: 160px; object-fit: contain; }
+
+        .lightbox {
+            position: fixed; inset: 0; background: rgba(10, 15, 25, .78);
+            display: none; align-items: center; justify-content: center; z-index: 70; padding: 30px;
+        }
+        .lightbox.show { display: flex; }
+        .lightbox img {
+            max-width: min(90vw, 420px); max-height: 80vh; object-fit: contain;
+            border-radius: 16px; background: #fff; padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.4);
         }
         .prow .name { flex: 1; min-width: 0; }
         .prow .name b { display: block; font-size: 14px; font-weight: 700; line-height: 1.25; }
@@ -304,6 +323,12 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="logo-preview" id="logoPreview"><img id="logoPreviewImg" alt=""></div>
+
+<div class="lightbox" id="logoLightbox">
+    <img id="lightboxImg" alt="">
+</div>
+
 <script>
     // Block double-tap zoom on iOS without blocking normal scrolling.
     var lastTouchEnd = 0;
@@ -367,28 +392,68 @@ const PALETTE = [
     '#5d4037', '#283593', '#ad1457', '#00838f', '#827717', '#4527a0'
 ];
 const RAW_PARTIES = [
-    ['אמת', 'הדמוקרטים - יאיר גולן'],
-    ['ב', 'עוצמה יהודית - איתמר בן גביר'],
-    ['ג', 'יהדות התורה - מי שזה לא יהיה...'],
-    ['די', 'המילואימניקים - יועז הנדל וירון זליכה'],
-    ['דרך', 'ישר - גדי איזנקוט'],
-    ['ודם', 'הרשימה המשותפת - איימן עודה'],
-    ['ט', 'הציונות הדתית - בצלאל סמוטריץ\''],
-    ['ך', 'עמך ישראל - עופר וינטר'],
-    ['כן', 'כחול לבן - בני גנץ'],
-    ['ל', 'ישראל ביתנו - אביגדור ליברמן'],
-    ['מחל', 'הליכוד - בנימין נתניהו'],
-    ['עם', 'רע"ם - מנסור עבאס'],
-    ['רק', 'ביחד - נפתלי בנט'],
-    ['שס', 'ש"ס - אריה דרעי']
+    ['אמת', 'הדמוקרטים - יאיר גולן', 'democrats.png'],
+    ['ב', 'עוצמה יהודית - איתמר בן גביר', 'עוצמהיהודית.jpeg'],
+    ['ג', 'יהדות התורה - מי שזה לא יהיה...', 'יהדות-התורה.png'],
+    ['די', 'המילואימניקים - יועז הנדל וירון זליכה', 'המילואימניקים.webp'],
+    ['דרך', 'ישר - גדי איזנקוט', 'ישר.jpg'],
+    ['ודם', 'הרשימה המשותפת - איימן עודה', 'המשותפת.webp'],
+    ['ט', 'הציונות הדתית - בצלאל סמוטריץ\'', 'ציונות-דתית.png'],
+    ['ך', 'עמך ישראל - עופר וינטר', 'עמך-ישראל.png'],
+    ['כן', 'כחול לבן - בני גנץ', 'כחול-לבן.png'],
+    ['ל', 'ישראל ביתנו - אביגדור ליברמן', 'ישראל_ביתנו_לוגו_.jpg'],
+    ['מחל', 'הליכוד - בנימין נתניהו', 'הליכוד.jpeg'],
+    ['עם', 'רע"ם - מנסור עבאס', 'רעמ.jpg'],
+    ['רק', 'ביחד - נפתלי בנט', 'ביחד-בנט.webp'],
+    ['שס', 'ש"ס - אריה דרעי', 'Shas_logo.svg.webp']
 ];
-const PARTIES = RAW_PARTIES.map(([ot, he], i) => ({
-    id: ot, ot, he, color: PALETTE[i % PALETTE.length]
+const PARTIES = RAW_PARTIES.map(([ot, he, logo], i) => ({
+    id: ot, ot, he, logo: logo ? `logos/${logo}` : '', color: PALETTE[i % PALETTE.length]
 }));
 
 // ---------------------------------------------------------------------
 const $ = sel => document.querySelector(sel);
 const partyById = id => PARTIES.find(p => p.id === id);
+const badgeHtml = p => p.logo
+    ? `<img src="${p.logo}" alt="${p.he}" loading="lazy">`
+    : p.ot;
+
+// ================= Logo hover-preview (desktop) + tap lightbox (mobile) =================
+const canHoverPreview = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+function attachBadgeInteractions(li, p) {
+    if (!p.logo) return;
+    const badge = li.querySelector('.badge');
+    badge.classList.add('has-logo');
+    badge.addEventListener('mouseenter', () => {
+        if (!canHoverPreview()) return;
+        const preview = $('#logoPreview');
+        $('#logoPreviewImg').src = p.logo;
+        $('#logoPreviewImg').alt = p.he;
+        preview.style.display = 'block';
+        positionPreview(badge, preview);
+    });
+    badge.addEventListener('mouseleave', () => { $('#logoPreview').style.display = 'none'; });
+    badge.addEventListener('click', () => openLightbox(p.logo, p.he));
+}
+
+function positionPreview(badge, preview) {
+    const rect = badge.getBoundingClientRect();
+    const w = 180, h = 200;
+    let left = rect.left + rect.width / 2 - w / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    let top = rect.bottom + 8;
+    if (top + h > window.innerHeight) top = Math.max(8, rect.top - h - 8);
+    preview.style.left = left + 'px';
+    preview.style.top = top + 'px';
+}
+
+function openLightbox(src, alt) {
+    $('#lightboxImg').src = src;
+    $('#lightboxImg').alt = alt;
+    $('#logoLightbox').classList.add('show');
+}
+function closeLightbox() { $('#logoLightbox').classList.remove('show'); }
 
 let auth = null, db = null;
 let currentUser = null;
@@ -683,7 +748,7 @@ function renderBoard() {
         li.className = 'prow';
         li.dataset.id = p.id;
         li.innerHTML = `
-            <div class="badge" style="background:${p.color}22;color:${p.color}">${p.ot}</div>
+            <div class="badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</div>
             <div class="name"><b>${p.he}</b></div>
             <input type="range" min="0" max="${MAX_MANDATES}" step="1" value="${guess[p.id]}">
             <input type="number" class="num" min="0" max="${MAX_MANDATES}" step="1" value="${guess[p.id]}">`;
@@ -691,6 +756,7 @@ function renderBoard() {
         const num = li.querySelector('input[type="number"]');
         range.addEventListener('input', () => setPartyValue(p.id, Number(range.value)));
         num.addEventListener('input', () => setPartyValue(p.id, Number(num.value) || 0));
+        attachBadgeInteractions(li, p);
         list.appendChild(li);
     });
     updateTotal();
@@ -744,11 +810,12 @@ function renderAdminBoard() {
         li.className = 'prow';
         li.dataset.id = p.id;
         li.innerHTML = `
-            <div class="badge" style="background:${p.color}22;color:${p.color}">${p.ot}</div>
+            <div class="badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</div>
             <div class="name"><b>${p.he}</b></div>
             <input type="number" class="num" min="0" max="${MAX_MANDATES}" step="1" value="${realResults[p.id]}">`;
         const num = li.querySelector('input[type="number"]');
         num.addEventListener('input', () => { realResults[p.id] = clamp(Number(num.value) || 0); });
+        attachBadgeInteractions(li, p);
         list.appendChild(li);
     });
 }
@@ -923,6 +990,7 @@ $('#logoutBtn').addEventListener('click', logout);
 $('#submitBtn').addEventListener('click', submitGuess);
 $('#resetBtn').addEventListener('click', resetAllGuesses);
 $('#adminSaveBtn').addEventListener('click', saveRealResults);
+$('#logoLightbox').addEventListener('click', e => { if (e.target.id === 'logoLightbox') closeLightbox(); });
 document.querySelectorAll('#tabs .tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 ['uInput', 'pInput'].forEach(id => $('#' + id).addEventListener('keydown', e => {
     if (e.key === 'Enter') (loginMode === 'login' ? signInWithUsername : registerWithUsername)();
