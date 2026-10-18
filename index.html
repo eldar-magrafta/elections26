@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#1a3a6b">
+    <title>ניחושי בחירות 2026</title>
+    <meta name="description" content="נחשו כמה מנדטים כל מפלגה תקבל בבחירות 2026 והתחרו מול החברים.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <style>
+        :root {
+            --navy: #1a3a6b;
+            --navy-dark: #10264a;
+            --navy-light: #2a5296;
+            --gold: #e3b23c;
+            --ink: #14202e;
+            --muted: #5c6878;
+            --paper: #f3f5f8;
+            --card: #ffffff;
+            --line: #e1e6ec;
+            --danger: #d64545;
+            --good: #1f9d57;
+            --shadow: 0 6px 22px rgba(16, 38, 74, .12);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; padding: 0; }
+        html { touch-action: pan-x pan-y; }
+
+        body {
+            font-family: 'Assistant', 'Rubik', system-ui, sans-serif;
+            background:
+                radial-gradient(1200px 500px at 50% -10%, rgba(42,82,150,.16), transparent 60%),
+                var(--paper);
+            color: var(--ink);
+            min-height: 100vh;
+            min-height: 100dvh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .wrap {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 20px 16px calc(120px + env(safe-area-inset-bottom, 0px));
+        }
+
+        header.app { text-align: center; padding: 22px 0 10px; }
+        .crest {
+            width: 76px; height: 76px; margin: 0 auto 8px;
+            display: grid; place-items: center;
+            background: linear-gradient(160deg, var(--navy-light), var(--navy-dark));
+            border-radius: 20px; box-shadow: var(--shadow);
+        }
+        .crest svg { width: 36px; height: 36px; fill: var(--gold); }
+        header.app h1 { font-size: clamp(22px, 6vw, 30px); font-weight: 800; margin: 6px 0 2px; letter-spacing: -.02em; }
+        header.app p { margin: 0; color: var(--muted); font-weight: 500; font-size: 15px; }
+
+        .countdown {
+            background: linear-gradient(160deg, var(--navy-light), var(--navy-dark));
+            color: #fff; border-radius: 20px; padding: 16px 14px 14px; margin: 14px 0 4px;
+            text-align: center; box-shadow: var(--shadow);
+        }
+        .cd-title { font-size: 14px; font-weight: 600; opacity: .92; margin-bottom: 10px; }
+        .cd-clock { display: flex; justify-content: center; gap: 8px; direction: ltr; }
+        .cd-seg { background: rgba(255,255,255,.14); border-radius: 12px; padding: 8px 4px 6px; min-width: 62px; backdrop-filter: blur(2px); }
+        .cd-seg b { display: block; font-size: 26px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+        .cd-seg span { font-size: 11px; opacity: .85; }
+        .cd-deadline { font-size: 12px; opacity: .8; margin-top: 10px; }
+        .countdown.closed { background: linear-gradient(160deg, #b23b3b, #8a2626); }
+        .cd-clock.done { font-size: 20px; font-weight: 800; padding: 6px 0; }
+
+        .userbar {
+            display: none; align-items: center; gap: 10px;
+            background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+            padding: 8px 12px; margin: 14px 0; box-shadow: var(--shadow);
+        }
+        .userbar .who { flex: 1; min-width: 0; }
+        .userbar .who b { display: block; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .userbar .who span { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .btn-ghost {
+            border: 1px solid var(--line); background: #fff; color: var(--muted);
+            border-radius: 12px; padding: 8px 12px; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer;
+        }
+        .btn-ghost:active { transform: scale(.97); }
+
+        .login { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 28px 22px; text-align: center; box-shadow: var(--shadow); }
+        .login h2 { margin: 0 0 6px; font-size: 19px; font-weight: 800; }
+        .login p.sub { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+        .login-tabs { display: flex; gap: 6px; background: var(--paper); border-radius: 14px; padding: 4px; margin-bottom: 16px; }
+        .login-tabs button {
+            flex: 1; border: 0; background: transparent; padding: 9px 0; border-radius: 11px;
+            font: inherit; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer;
+        }
+        .login-tabs button.active { background: var(--card); color: var(--navy); box-shadow: 0 2px 8px rgba(16,38,74,.1); }
+        .field { text-align: right; margin-bottom: 12px; }
+        .field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+        .field input {
+            width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 12px;
+            font: inherit; font-size: 15px; background: var(--paper);
+        }
+        .field input:focus { outline: 2px solid var(--navy-light); outline-offset: 1px; }
+        .user-msg { min-height: 18px; font-size: 13px; font-weight: 600; margin: 6px 0 8px; }
+        .user-msg.err { color: var(--danger); }
+        .user-msg.ok { color: var(--good); }
+        .btn-primary {
+            width: 100%; border: 0; background: linear-gradient(160deg, var(--navy-light), var(--navy-dark));
+            color: #fff; padding: 13px 0; border-radius: 14px; font: inherit; font-weight: 800; font-size: 15px;
+            cursor: pointer; box-shadow: var(--shadow);
+        }
+        .btn-primary:disabled { opacity: .6; cursor: default; }
+        .btn-primary:active { transform: scale(.98); }
+        .config-warn {
+            display: none; background: #fff4e5; border: 1px solid #f3cf8f; color: #8a5a00;
+            border-radius: 12px; padding: 10px 12px; font-size: 13px; margin-bottom: 14px; text-align: right;
+        }
+        .config-warn code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 6px; }
+
+        .tabs { display: none; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 5px; margin: 14px 0; box-shadow: var(--shadow); }
+        .tab { flex: 1; border: 0; background: transparent; padding: 10px 2px; border-radius: 12px; font: inherit; font-weight: 700; font-size: 12.5px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+        .tab.active { background: linear-gradient(160deg, var(--navy-light), var(--navy-dark)); color: #fff; }
+
+        .totalbar {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px;
+            margin-bottom: 10px; box-shadow: var(--shadow);
+        }
+        .totalbar .lbl { font-size: 13px; font-weight: 700; color: var(--muted); }
+        .totalbar .val { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .totalbar .val.ok { color: var(--good); }
+        .totalbar .val.bad { color: var(--danger); }
+        .totalbar .hint { font-size: 12px; color: var(--muted); }
+
+        .chart-card {
+            background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+            padding: 10px 6px 2px; margin-bottom: 10px; box-shadow: var(--shadow);
+        }
+
+        #board { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+        .prow {
+            display: flex; align-items: center; gap: 10px; background: var(--card);
+            border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; box-shadow: var(--shadow);
+        }
+        .prow .badge {
+            width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+            font-weight: 800; font-size: 13px; flex-shrink: 0;
+        }
+        .prow .name { flex: 1; min-width: 0; }
+        .prow .name b { display: block; font-size: 14px; font-weight: 700; line-height: 1.25; }
+        .prow .name span { display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+        .prow .num {
+            width: 54px; text-align: center; padding: 8px 2px; border: 1px solid var(--line);
+            border-radius: 10px; font: inherit; font-weight: 800; font-size: 16px; background: var(--paper);
+        }
+        .prow input[type="range"] {
+            width: 86px; accent-color: var(--navy-light); flex-shrink: 0;
+        }
+        .prow.locked .num, .prow.locked input[type="range"] { opacity: .55; pointer-events: none; }
+
+        .submitbar { display: none; position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, rgba(243,245,248,1) 60%, rgba(243,245,248,0)); }
+        .submitbar .inner { max-width: 640px; margin: 0 auto; }
+        .submitbar button { width: 100%; border: 0; background: linear-gradient(160deg, var(--navy-light), var(--navy-dark)); color: #fff; padding: 15px 0; border-radius: 16px; font: inherit; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .submitbar button:disabled { opacity: .6; }
+        .save-hint { text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
+        .spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: spin .7s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .lb-loading, .lb-empty, .all-locked { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
+        .all-locked .lock { font-size: 30px; display: block; margin-bottom: 10px; }
+
+        .lb-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); }
+        .lb-card .top { display: flex; align-items: center; gap: 10px; }
+        .lb-card .rank { width: 28px; height: 28px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-weight: 800; font-size: 13px; flex-shrink: 0; }
+        .lb-card.me { border-color: var(--navy-light); }
+        .lb-card .name { flex: 1; font-weight: 700; font-size: 14.5px; }
+        .lb-card .score { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+        .lb-card .score.good { color: var(--good); }
+        .lb-card .score.bad { color: var(--danger); }
+        .lb-card .detail { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; font-size: 11.5px; }
+        .lb-card .chip { background: var(--paper); border-radius: 8px; padding: 3px 7px; }
+
+        .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 50; max-width: 90vw; text-align: center; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.err { background: var(--danger); }
+
+        .howto { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin: 14px 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+        .howto b { color: var(--ink); }
+        footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 6px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header class="app">
+        <div class="crest">
+            <svg viewBox="0 0 24 24"><path d="M12 2 2 7v2h20V7L12 2Zm-7 9v8H3v2h18v-2h-2v-8h-2v8h-3v-8h-2v8h-3v-8H5Z"/></svg>
+        </div>
+        <h1>ניחושי בחירות 2026</h1>
+        <p>כמה מנדטים כל מפלגה תקבל, לדעתכם?</p>
+    </header>
+
+    <div class="countdown" id="countdown">
+        <div class="cd-title">זמן עד לסגירת ההגשה</div>
+        <div class="cd-clock" id="cdClock">
+            <div class="cd-seg"><b id="cdD">--</b><span>ימים</span></div>
+            <div class="cd-seg"><b id="cdH">--</b><span>שעות</span></div>
+            <div class="cd-seg"><b id="cdM">--</b><span>דקות</span></div>
+            <div class="cd-seg"><b id="cdS">--</b><span>שניות</span></div>
+        </div>
+        <div class="cd-deadline" id="cdDeadlineText"></div>
+    </div>
+
+    <div class="userbar" id="userbar">
+        <img id="uAvatar" alt="" style="display:none">
+        <div class="who"><b id="uName"></b><span id="uEmail"></span></div>
+        <button class="btn-ghost" id="logoutBtn">התנתקות</button>
+    </div>
+
+    <div class="login" id="loginCard">
+        <h2>כניסה לניחוש</h2>
+        <p class="sub">נרשמים עם שם משתמש וסיסמה — בלי מייל אמיתי.</p>
+        <div class="config-warn" id="configWarn"></div>
+        <div class="login-tabs">
+            <button id="loginModeBtn" class="active" data-mode="login">כניסה</button>
+            <button id="registerModeBtn" data-mode="register">הרשמה</button>
+        </div>
+        <div class="field">
+            <label for="uInput">שם משתמש</label>
+            <input id="uInput" type="text" autocomplete="username" placeholder="לדוגמה: dana123">
+        </div>
+        <div class="field">
+            <label for="pInput">סיסמה</label>
+            <input id="pInput" type="password" autocomplete="current-password" placeholder="5 תווים לפחות">
+        </div>
+        <div class="user-msg" id="userMsg"></div>
+        <button class="btn-primary" id="loginUserBtn">כניסה</button>
+        <button class="btn-primary" id="registerUserBtn" style="display:none">הרשמה</button>
+    </div>
+
+    <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="guess">הניחוש שלי</button>
+        <button class="tab" data-tab="all">כל הניחושים</button>
+        <button class="tab" data-tab="board">לוח התוצאות</button>
+        <button class="tab" id="adminTab" data-tab="admin" style="display:none">עדכון תוצאות</button>
+    </div>
+
+    <div id="guessView" style="display:none">
+        <div class="chart-card">
+            <div id="mandateChart"></div>
+        </div>
+        <div class="totalbar">
+            <div>
+                <div class="lbl">סה"כ מנדטים שחולקו</div>
+                <div class="hint">120 מנדטים לחלק בין כל המפלגות</div>
+            </div>
+            <div class="val" id="totalVal">0</div>
+        </div>
+        <ul id="board"></ul>
+    </div>
+
+    <div id="allView" style="display:none">
+        <div id="allStatus" style="margin-bottom:10px;color:var(--muted);font-size:13px;text-align:center"></div>
+        <div id="allList"></div>
+    </div>
+
+    <div id="leaderView" style="display:none">
+        <div id="leaderStatus" style="margin-bottom:10px;color:var(--muted);font-size:13px;text-align:center"></div>
+        <div id="leaderList"></div>
+    </div>
+
+    <div id="adminView" style="display:none">
+        <div class="howto"><b>מצב מנהל:</b> הזינו את תוצאות הבחירות הרשמיות (מספר המנדטים האמיתי של כל מפלגה) ולחצו שמירה. לוח התוצאות של כולם יחושב מול המספרים האלה.</div>
+        <ul id="adminBoard"></ul>
+        <button class="btn-primary" id="adminSaveBtn" style="margin-top:12px">שמירת תוצאות הבחירות</button>
+    </div>
+
+    <div class="howto" id="howto">
+        <b>איך זה עובד:</b> נרשמים עם שם משתמש וסיסמה, ומחלקים 120 מנדטים בין כל המפלגות —
+        אי אפשר לחלק יותר מ-120 בסך הכול. שומרים עד למועד הסגירה.
+        <b>ניקוד:</b> על כל מפלגה שבה פגעתם בול מקבלים <b>3+</b> נקודות, ועל כל מפלגה שבה טעיתם
+        מקבלים נקודת עונשין אחת שלילית על כל מנדט הפרש (למשל טעות של 2 = 2-). מי שסכום הנקודות שלו הכי גבוה מנצח.
+    </div>
+
+    <footer>עונת בחירות 2026 · הניחושים נשמרים ב-Firebase</footer>
+</div>
+
+<div class="submitbar" id="submitbar">
+    <div class="inner">
+        <button id="submitBtn"><span id="submitLabel">שמירת הניחוש</span></button>
+        <div class="save-hint" id="saveHint"></div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    // Block double-tap zoom on iOS without blocking normal scrolling.
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function (e) {
+        var now = Date.now();
+        if (now - lastTouchEnd <= 300) e.preventDefault();
+        lastTouchEnd = now;
+    }, { passive: false });
+</script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+import {
+    getAuth, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile
+} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+
+// =====================================================================
+//  CONFIG — paste your Firebase web-app config here (see README.md)
+//  Firebase Console → Project settings → Your apps → Web app → SDK config
+// =====================================================================
+const FIREBASE_CONFIG = {
+    apiKey:            'AIzaSyAWssL2C2nvV3Zh-676RNnJDn5IDVuKrNA',
+    authDomain:        'elections26-db85a.firebaseapp.com',
+    projectId:         'elections26-db85a',
+    storageBucket:     'elections26-db85a.firebasestorage.app',
+    messagingSenderId: '1072612965546',
+    appId:             '1:1072612965546:web:23f13602a1d1594a5ae4d3'
+};
+
+const SEASON = '2026';
+
+// Only this account can edit the real election results (the "עדכון תוצאות" tab).
+// Change this to the email you'll actually register with (see README).
+const ADMIN_EMAIL = 'eldar@users.elections26.app';
+
+// ── Username login ──
+// Firebase Auth needs an email, so each username maps to a synthetic address
+// under this (non-real) domain. Firebase enforces its uniqueness for us.
+const USER_EMAIL_DOMAIN = '@users.elections26.app';
+// Firebase requires passwords >= 6 chars; we allow 5, so we append a fixed
+// internal salt before sending to Firebase. Users only ever type 5+.
+const PW_SALT = '#El26!';
+const MIN_PW = 5;
+const usernameToEmail = u => u.trim().toLowerCase() + USER_EMAIL_DOMAIN;
+const isSyntheticEmail = e => typeof e === 'string' && e.endsWith(USER_EMAIL_DOMAIN);
+
+// Submission deadline — polls-close time. After this moment predictions lock
+// and can no longer be saved/changed. (+02:00 = Israel Standard Time, since
+// clocks go back to IST on the last Sunday of October.)
+const DEADLINE = new Date('2026-10-27T05:59:00+02:00').getTime();
+
+const MAX_MANDATES = 120;
+
+// =====================================================================
+//  PARTIES — רשימת המפלגות לבחירות 2026. ot = אות הבחירות, he = שם מלא.
+// =====================================================================
+const PALETTE = [
+    '#1a3a6b', '#c62828', '#2e7d32', '#6a1b9a', '#ef6c00', '#00695c',
+    '#5d4037', '#283593', '#ad1457', '#00838f', '#827717', '#4527a0'
+];
+const RAW_PARTIES = [
+    ['אמת', 'הדמוקרטים בראשות יאיר גולן'],
+    ['ב', 'עוצמה יהודית בראשות איתמר בן גביר'],
+    ['ג', 'יהדות התורה והשבת אגודת ישראל – דגל התורה'],
+    ['די', 'המילואימניקים והכלכלית בראשות יועז הנדל וירון זליכה'],
+    ['דרך', 'ישר! עם איזנקוט לראשות הממשלה מאחדים את ישראל'],
+    ['ודם', 'הרשימה המשותפת'],
+    ['ט', 'הציונות הדתית בראשות בצלאל סמוטריץ\' וזהות בראשות משה פייגלין'],
+    ['ך', 'עמך ישראל בראשות עופר וינטר'],
+    ['כן', 'כחול לבן בראשות בני גנץ'],
+    ['ל', 'ישראל ביתנו בראשות אביגדור ליברמן'],
+    ['מחל', 'הליכוד בהנהגת בנימין נתניהו לראשות הממשלה'],
+    ['עם', 'רע"ם – הרשימה הערבית המאוחדת'],
+    ['רק', 'ביחד בראשות נפתלי בנט'],
+    ['שס', 'התאחדות הספרדים שומרי תורה תנועתו של מרן הרב עובדיה יוסף זצ"ל']
+];
+const PARTIES = RAW_PARTIES.map(([ot, he], i) => ({
+    id: ot, ot, he, color: PALETTE[i % PALETTE.length]
+}));
+
+// ---------------------------------------------------------------------
+const $ = sel => document.querySelector(sel);
+const partyById = id => PARTIES.find(p => p.id === id);
+
+let auth = null, db = null;
+let currentUser = null;
+let guess = {};  // partyId -> mandates (0-120)
+let realResults = {}; // partyId -> mandates (admin-set, after election)
+let hasRealResults = false;
+let locked = false;
+let activeTab = 'guess';
+let loginMode = 'login';
+let mandateChart = null;
+
+PARTIES.forEach(p => { guess[p.id] = 0; realResults[p.id] = 0; });
+
+// ================= Firebase init =================
+function configured() {
+    return FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('YOUR_');
+}
+
+function initFirebase() {
+    if (!configured()) {
+        $('#loginCard').style.display = 'block';
+        const w = $('#configWarn');
+        w.style.display = 'block';
+        w.innerHTML = 'לא הוגדר Firebase. הדביקו את הקונפיג ב־<code>FIREBASE_CONFIG</code> בקובץ <code>index.html</code> (ראו README).';
+        $('#loginUserBtn').disabled = true;
+        $('#registerUserBtn').disabled = true;
+        return;
+    }
+    const app = initializeApp(FIREBASE_CONFIG);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+    onAuthStateChanged(auth, user => {
+        currentUser = user;
+        if (user) enterApp();
+        else showLogin();
+    });
+}
+
+async function logout() {
+    try { await signOut(auth); } catch (_) {}
+}
+
+// ── Username + password ──
+function userMsg(text, kind) {
+    const el = $('#userMsg');
+    el.textContent = text || '';
+    el.className = 'user-msg' + (kind ? ' ' + kind : '');
+}
+
+function readCreds() {
+    const username = $('#uInput').value.trim();
+    const password = $('#pInput').value;
+    if (!/^[A-Za-z0-9._-]{3,20}$/.test(username)) {
+        userMsg('שם משתמש: 3–20 תווים באנגלית, ספרות או . _ -', 'err');
+        return null;
+    }
+    if (password.length < MIN_PW) {
+        userMsg('הסיסמה צריכה להכיל לפחות ' + MIN_PW + ' תווים', 'err');
+        return null;
+    }
+    return { username, email: usernameToEmail(username), password: password + PW_SALT };
+}
+
+async function registerWithUsername() {
+    const c = readCreds();
+    if (!c) return;
+    setUserBusy(true);
+    try {
+        const cred = await createUserWithEmailAndPassword(auth, c.email, c.password);
+        await updateProfile(cred.user, { displayName: c.username });
+        currentUser = cred.user;
+    } catch (e) {
+        if (e && e.code === 'auth/email-already-in-use')
+            userMsg('שם המשתמש כבר תפוס — בחרו אחר או לחצו "כניסה"', 'err');
+        else if (e && e.code === 'auth/operation-not-allowed')
+            userMsg('התחברות עם שם משתמש עדיין לא הופעלה ב-Firebase', 'err');
+        else
+            userMsg('ההרשמה נכשלה, נסו שוב', 'err');
+    } finally {
+        setUserBusy(false);
+    }
+}
+
+async function signInWithUsername() {
+    const c = readCreds();
+    if (!c) return;
+    setUserBusy(true);
+    try {
+        await signInWithEmailAndPassword(auth, c.email, c.password);
+    } catch (e) {
+        const code = e && e.code;
+        if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found')
+            userMsg('שם משתמש או סיסמה שגויים (משתמש חדש? לחצו "הרשמה")', 'err');
+        else if (code === 'auth/operation-not-allowed')
+            userMsg('התחברות עם שם משתמש עדיין לא הופעלה ב-Firebase', 'err');
+        else
+            userMsg('ההתחברות נכשלה, נסו שוב', 'err');
+    } finally {
+        setUserBusy(false);
+    }
+}
+
+function setUserBusy(on) {
+    $('#loginUserBtn').disabled = on;
+    $('#registerUserBtn').disabled = on;
+}
+
+function setLoginMode(mode) {
+    loginMode = mode;
+    $('#loginModeBtn').classList.toggle('active', mode === 'login');
+    $('#registerModeBtn').classList.toggle('active', mode === 'register');
+    $('#loginUserBtn').style.display = mode === 'login' ? '' : 'none';
+    $('#registerUserBtn').style.display = mode === 'register' ? '' : 'none';
+    userMsg('');
+}
+
+// ================= Screens =================
+function showLogin() {
+    $('#loginCard').style.display = 'block';
+    $('#tabs').style.display = 'none';
+    $('#guessView').style.display = 'none';
+    $('#allView').style.display = 'none';
+    $('#leaderView').style.display = 'none';
+    $('#adminView').style.display = 'none';
+    $('#userbar').style.display = 'none';
+    $('#howto').style.display = 'none';
+    $('#submitbar').style.display = 'none';
+}
+
+async function enterApp() {
+    $('#loginCard').style.display = 'none';
+    const synthetic = isSyntheticEmail(currentUser.email);
+    $('#uName').textContent = currentUser.displayName ||
+        (synthetic ? currentUser.email.split('@')[0] : currentUser.email);
+    $('#uEmail').textContent = synthetic ? 'שם משתמש' : (currentUser.email || '');
+    $('#userbar').style.display = 'flex';
+    $('#tabs').style.display = 'flex';
+    $('#howto').style.display = 'block';
+
+    $('#adminTab').style.display = (currentUser.email === ADMIN_EMAIL) ? '' : 'none';
+
+    // Reset to a clean slate before loading — otherwise switching users in the
+    // same tab (without a full page reload) leaves the previous user's
+    // in-memory slider values on screen for anyone who hasn't saved a
+    // prediction yet, which looks like (but isn't) their data leaking in.
+    PARTIES.forEach(p => { guess[p.id] = 0; });
+    setHint('');
+    renderBoard();
+    switchTab('guess');
+
+    try {
+        const snap = await getDoc(doc(db, 'predictions', currentUser.uid));
+        if (snap.exists()) {
+            const data = snap.data();
+            if (data.mandates && typeof data.mandates === 'object') {
+                PARTIES.forEach(p => {
+                    const v = Number(data.mandates[p.id]);
+                    guess[p.id] = Number.isFinite(v) ? clamp(v) : 0;
+                });
+                renderBoard();
+                const when = data.updatedAt ? new Date(data.updatedAt).toLocaleDateString('he-IL') : '';
+                setHint('נטען ניחוש שמור' + (when ? ' מ־' + when : ''));
+            }
+        }
+    } catch (_) { /* offline / first time — keep defaults */ }
+
+    try {
+        const rsnap = await getDoc(doc(db, 'meta', 'results'));
+        if (rsnap.exists()) {
+            const data = rsnap.data();
+            if (data.mandates && typeof data.mandates === 'object') {
+                PARTIES.forEach(p => {
+                    const v = Number(data.mandates[p.id]);
+                    realResults[p.id] = Number.isFinite(v) ? clamp(v) : 0;
+                });
+                hasRealResults = true;
+            }
+        }
+    } catch (_) { /* not set yet */ }
+
+    if (currentUser.email === ADMIN_EMAIL) renderAdminBoard();
+    applyLockToBoard();
+}
+
+// ================= Tabs =================
+function switchTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('#tabs .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    $('#guessView').style.display  = tab === 'guess' ? 'block' : 'none';
+    $('#submitbar').style.display  = tab === 'guess' ? 'block' : 'none';
+    $('#allView').style.display    = tab === 'all'   ? 'block' : 'none';
+    $('#leaderView').style.display = tab === 'board' ? 'block' : 'none';
+    $('#adminView').style.display  = tab === 'admin' ? 'block' : 'none';
+    if (tab === 'all')   loadAllGuesses();
+    if (tab === 'board') loadLeaderboard();
+}
+
+function clamp(n) { return Math.max(0, Math.min(MAX_MANDATES, Math.round(n))); }
+
+// ================= Render: my guess board =================
+// The 120 mandates are a shared budget — no party's value can push the total past 120.
+function totalGuessed() { return PARTIES.reduce((s, p) => s + (guess[p.id] || 0), 0); }
+function othersTotal(excludeId) { return PARTIES.reduce((s, p) => s + (p.id === excludeId ? 0 : (guess[p.id] || 0)), 0); }
+
+// ================= Live rounded-donut chart (ApexCharts) =================
+// Mirrors apexcharts.com/javascript-chart-demos/pie-charts/rounded-donut —
+// a donut with rounded slice corners, redrawn on every slider/number edit.
+function syncChart() {
+    if (typeof ApexCharts === 'undefined') return; // CDN blocked/offline — chart is cosmetic, app still works without it
+    const series = PARTIES.map(p => guess[p.id] || 0);
+    if (!mandateChart) {
+        mandateChart = new ApexCharts(document.querySelector('#mandateChart'), {
+            chart: { type: 'donut', height: 300, animations: { enabled: true, easing: 'easeinout', speed: 250 } },
+            series,
+            labels: PARTIES.map(p => `${p.ot} · ${p.he}`),
+            colors: PARTIES.map(p => p.color),
+            stroke: { width: 2, colors: ['#ffffff'] },
+            plotOptions: {
+                pie: {
+                    borderRadius: 8,
+                    expandOnClick: false,
+                    donut: {
+                        size: '68%',
+                        labels: {
+                            show: true,
+                            value: { fontSize: '26px', fontWeight: 800, formatter: v => v },
+                            total: {
+                                show: true,
+                                showAlways: true,
+                                label: 'סה"כ',
+                                formatter: () => totalGuessed() + ' / ' + MAX_MANDATES
+                            }
+                        }
+                    }
+                }
+            },
+            dataLabels: { enabled: false },
+            legend: { show: false },
+            tooltip: { y: { formatter: v => v + ' מנדטים' } }
+        });
+        mandateChart.render();
+    } else {
+        mandateChart.updateSeries(series);
+    }
+}
+
+function updateTotal() {
+    const total = totalGuessed();
+    const el = $('#totalVal');
+    el.textContent = total;
+    el.className = 'val ' + (total === MAX_MANDATES ? 'ok' : '');
+    // Note: we deliberately don't touch other rows' `max` attribute here —
+    // lowering a range input's max below its current value forces the browser
+    // to silently clamp that value too, which looked like dragging one slider
+    // was moving every other one. The 120-budget clamp in setPartyValue()
+    // already enforces the cap correctly on the row actually being edited.
+    syncChart();
+}
+
+function setPartyValue(id, rawValue) {
+    const remaining = clamp(MAX_MANDATES - othersTotal(id));
+    const v = Math.max(0, Math.min(remaining, clamp(rawValue)));
+    guess[id] = v;
+    const li = document.querySelector(`#board .prow[data-id="${id}"]`);
+    li.querySelector('input[type="range"]').value = v;
+    li.querySelector('input[type="number"]').value = v;
+    updateTotal();
+}
+
+function renderBoard() {
+    const list = $('#board');
+    list.innerHTML = '';
+    PARTIES.forEach(p => {
+        const li = document.createElement('li');
+        li.className = 'prow';
+        li.dataset.id = p.id;
+        li.innerHTML = `
+            <div class="badge" style="background:${p.color}22;color:${p.color}">${p.ot}</div>
+            <div class="name"><b>${p.he}</b><span>אות ${p.ot}</span></div>
+            <input type="range" min="0" max="${MAX_MANDATES}" step="1" value="${guess[p.id]}">
+            <input type="number" class="num" min="0" max="${MAX_MANDATES}" step="1" value="${guess[p.id]}">`;
+        const range = li.querySelector('input[type="range"]');
+        const num = li.querySelector('input[type="number"]');
+        range.addEventListener('input', () => setPartyValue(p.id, Number(range.value)));
+        num.addEventListener('input', () => setPartyValue(p.id, Number(num.value) || 0));
+        list.appendChild(li);
+    });
+    updateTotal();
+}
+
+function applyLockToBoard() {
+    document.querySelectorAll('#board .prow').forEach(li => li.classList.toggle('locked', locked));
+    $('#submitBtn').disabled = locked;
+    if (locked) setHint('ההגשה נעולה — המועד האחרון עבר');
+}
+
+function setHint(text) { $('#saveHint').textContent = text || ''; }
+
+// ================= Firestore save =================
+async function submitGuess() {
+    if (!currentUser || !db) return;
+    if (locked) { toast('ההגשה נסגרה — המועד האחרון עבר', true); return; }
+    setSubmitting(true);
+    try {
+        await setDoc(doc(db, 'predictions', currentUser.uid), {
+            uid: currentUser.uid,
+            name: currentUser.displayName || '',
+            email: currentUser.email || '',
+            season: SEASON,
+            mandates: { ...guess },
+            updatedAt: Date.now()
+        });
+        toast('הניחוש נשמר! 🗳️');
+        setHint('נשמר בהצלחה · ' + new Date().toLocaleString('he-IL'));
+    } catch (err) {
+        toast('שמירה נכשלה, נסו שוב', true);
+    } finally {
+        setSubmitting(false);
+    }
+}
+
+function setSubmitting(on) {
+    const btn = $('#submitBtn'), label = $('#submitLabel');
+    btn.disabled = on || locked;
+    label.innerHTML = on ? '<span class="spin"></span> שומר…' : 'שמירת הניחוש';
+}
+
+// ================= Admin: real results =================
+function renderAdminBoard() {
+    const list = $('#adminBoard');
+    list.innerHTML = '';
+    PARTIES.forEach(p => {
+        const li = document.createElement('li');
+        li.className = 'prow';
+        li.dataset.id = p.id;
+        li.innerHTML = `
+            <div class="badge" style="background:${p.color}22;color:${p.color}">${p.ot}</div>
+            <div class="name"><b>${p.he}</b><span>אות ${p.ot}</span></div>
+            <input type="number" class="num" min="0" max="${MAX_MANDATES}" step="1" value="${realResults[p.id]}">`;
+        const num = li.querySelector('input[type="number"]');
+        num.addEventListener('input', () => { realResults[p.id] = clamp(Number(num.value) || 0); });
+        list.appendChild(li);
+    });
+}
+
+async function saveRealResults() {
+    if (!currentUser || currentUser.email !== ADMIN_EMAIL) return;
+    const btn = $('#adminSaveBtn');
+    btn.disabled = true;
+    try {
+        await setDoc(doc(db, 'meta', 'results'), {
+            season: SEASON,
+            mandates: { ...realResults },
+            updatedAt: Date.now()
+        });
+        hasRealResults = true;
+        toast('תוצאות הבחירות נשמרו');
+    } catch (_) {
+        toast('שמירה נכשלה, נסו שוב', true);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// ================= Everyone's guesses (revealed after the deadline) =================
+async function loadAllGuesses() {
+    const status = $('#allStatus'), list = $('#allList');
+
+    if (Date.now() < DEADLINE) {
+        status.innerHTML = '';
+        const when = new Date(DEADLINE).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+        list.innerHTML =
+            '<div class="all-locked"><span class="lock">🔒</span>' +
+            'הניחושים של כל המשתתפים ייחשפו<br>מיד לאחר סגירת ההגשה' +
+            '<br><b>' + when + '</b></div>';
+        return;
+    }
+
+    status.innerHTML = 'ההגשה נסגרה — כל הניחושים חשופים';
+    list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    try {
+        const snaps = await getDocs(collection(db, 'predictions'));
+        const players = [];
+        snaps.forEach(d => {
+            const p = d.data();
+            if (!p.mandates) return;
+            players.push({ uid: p.uid || d.id, name: p.name || p.email || 'שחקן', mandates: p.mandates });
+        });
+        if (!players.length) {
+            list.innerHTML = '<div class="lb-empty">אין ניחושים שמורים.</div>';
+            return;
+        }
+        players.sort((a, b) => (a.uid === currentUser.uid ? -1 : b.uid === currentUser.uid ? 1 : a.name.localeCompare(b.name, 'he')));
+        list.innerHTML = '';
+        players.forEach(pl => {
+            const card = document.createElement('div');
+            card.className = 'lb-card' + (pl.uid === currentUser.uid ? ' me' : '');
+            const chips = PARTIES
+                .filter(p => Number(pl.mandates[p.id]) > 0)
+                .sort((a, b) => Number(pl.mandates[b.id]) - Number(pl.mandates[a.id]))
+                .map(p => `<span class="chip">${p.ot}: ${Number(pl.mandates[p.id])}</span>`).join('');
+            card.innerHTML = `
+                <div class="top"><div class="name">${pl.name}</div></div>
+                <div class="detail">${chips || '<span class="chip">אין ניחוש</span>'}</div>`;
+            list.appendChild(card);
+        });
+    } catch (_) {
+        list.innerHTML = '<div class="lb-empty">טעינה נכשלה.</div>';
+    }
+}
+
+// ================= Leaderboard (real results vs. each guess) =================
+// Score per player = Σ over all parties of:
+//   +3  if the guess exactly matches the real result (a "bullseye")
+//   -|guess - real|  otherwise (every seat off costs one point)
+// Highest total wins.
+const BULLSEYE_BONUS = 3;
+function computeScore(mandates) {
+    let score = 0;
+    PARTIES.forEach(p => {
+        const g = Number(mandates[p.id]) || 0;
+        const r = Number(realResults[p.id]) || 0;
+        const diff = Math.abs(g - r);
+        score += diff === 0 ? BULLSEYE_BONUS : -diff;
+    });
+    return score;
+}
+
+async function loadLeaderboard() {
+    const status = $('#leaderStatus'), list = $('#leaderList');
+
+    if (!hasRealResults) {
+        status.innerHTML = '';
+        list.innerHTML = '<div class="lb-empty">לוח התוצאות יופיע כשתוצאות הבחירות האמיתיות יוזנו ע"י המנהל.</div>';
+        return;
+    }
+
+    status.innerHTML = 'מחושב מול תוצאות הבחירות האמיתיות';
+    list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    try {
+        const snaps = await getDocs(collection(db, 'predictions'));
+        const players = [];
+        snaps.forEach(d => {
+            const p = d.data();
+            if (!p.mandates) return;
+            players.push({ uid: p.uid || d.id, name: p.name || p.email || 'שחקן', mandates: p.mandates, score: computeScore(p.mandates) });
+        });
+        if (!players.length) {
+            list.innerHTML = '<div class="lb-empty">אין ניחושים שמורים.</div>';
+            return;
+        }
+        players.sort((a, b) => b.score - a.score);
+        list.innerHTML = '';
+        players.forEach((pl, i) => {
+            const card = document.createElement('div');
+            card.className = 'lb-card' + (pl.uid === currentUser.uid ? ' me' : '');
+            card.innerHTML = `
+                <div class="top">
+                    <div class="rank">${i + 1}</div>
+                    <div class="name">${pl.name}</div>
+                    <div class="score ${i === 0 ? 'good' : ''}">${pl.score}</div>
+                </div>`;
+            list.appendChild(card);
+        });
+    } catch (_) {
+        list.innerHTML = '<div class="lb-empty">טעינה נכשלה.</div>';
+    }
+}
+
+// ================= Countdown =================
+function tickCountdown() {
+    const now = Date.now();
+    const diff = DEADLINE - now;
+    const box = $('#countdown');
+    locked = diff <= 0;
+    if (locked) {
+        box.classList.add('closed');
+        $('#cdClock').classList.add('done');
+        $('#cdClock').innerHTML = '🔒 ההגשה נסגרה';
+        $('#cdDeadlineText').textContent = '';
+        applyLockToBoard();
+        return;
+    }
+    box.classList.remove('closed');
+    const s = Math.floor(diff / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    $('#cdD').textContent = d;
+    $('#cdH').textContent = String(h).padStart(2, '0');
+    $('#cdM').textContent = String(m).padStart(2, '0');
+    $('#cdS').textContent = String(sec).padStart(2, '0');
+    $('#cdDeadlineText').textContent = 'מועד אחרון: ' + new Date(DEADLINE).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ================= Toast =================
+let toastTimer = null;
+function toast(text, isErr) {
+    const el = $('#toast');
+    el.textContent = text;
+    el.className = 'toast show' + (isErr ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ================= Wire up =================
+$('#loginModeBtn').addEventListener('click', () => setLoginMode('login'));
+$('#registerModeBtn').addEventListener('click', () => setLoginMode('register'));
+$('#loginUserBtn').addEventListener('click', signInWithUsername);
+$('#registerUserBtn').addEventListener('click', registerWithUsername);
+$('#logoutBtn').addEventListener('click', logout);
+$('#submitBtn').addEventListener('click', submitGuess);
+$('#adminSaveBtn').addEventListener('click', saveRealResults);
+document.querySelectorAll('#tabs .tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+['uInput', 'pInput'].forEach(id => $('#' + id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') (loginMode === 'login' ? signInWithUsername : registerWithUsername)();
+}));
+
+tickCountdown();
+setInterval(tickCountdown, 1000);
+initFirebase();
+</script>
+</body>
+</html>
