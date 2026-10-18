@@ -7,6 +7,16 @@
     <title>ניחושי בחירות 2026</title>
     <meta name="description" content="נחשו כמה מנדטים כל מפלגה תקבל בבחירות 2026 והתחרו מול החברים.">
 
+    <meta property="og:title" content="ניחושי בחירות 2026">
+    <meta property="og:description" content="נחשו כמה מנדטים כל מפלגה תקבל בבחירות 2026 והתחרו מול החברים.">
+    <meta property="og:image" content="https://eldar-magrafta.github.io/elections26/assets/BB-bengvir.jpg">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://eldar-magrafta.github.io/elections26/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ניחושי בחירות 2026">
+    <meta name="twitter:description" content="נחשו כמה מנדטים כל מפלגה תקבל בבחירות 2026 והתחרו מול החברים.">
+    <meta name="twitter:image" content="https://eldar-magrafta.github.io/elections26/assets/BB-bengvir.jpg">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
@@ -1275,7 +1285,7 @@ async function createSideBet() {
     const line = Number($('#betLine').value);
     const inviteeUsername = $('#betInvitee').value.trim();
     if (!isValidBetLine(line)) {
-        setBetMsg('הקו חייב להיות מספר וחצי (למשל 5.5), בין 3.5 ל-119.5', 'err');
+        setBetMsg('הליין חייב להיות מספר וחצי (למשל 5.5), בין 3.5 ל-119.5', 'err');
         $('#betLine').classList.add('invalid');
         return;
     }
@@ -1483,7 +1493,7 @@ $('#betLine').addEventListener('input', () => {
     if (raw === '') { $('#betLine').classList.remove('invalid'); setBetMsg(''); return; }
     const valid = isValidBetLine(Number(raw));
     $('#betLine').classList.toggle('invalid', !valid);
-    setBetMsg(valid ? '' : 'הקו חייב להיות מספר וחצי (למשל 5.5), בין 3.5 ל-119.5', valid ? '' : 'err');
+    setBetMsg(valid ? '' : 'הליין חייב להיות מספר וחצי (למשל 5.5), בין 3.5 ל-119.5', valid ? '' : 'err');
 });
 $('#betInvitee').addEventListener('focus', async () => {
     await ensureUsernamesLoaded();
