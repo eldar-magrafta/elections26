@@ -437,6 +437,12 @@
         <button class="btn-primary" id="registerUserBtn" style="display:none">הרשמה</button>
     </div>
 
+    <div class="login" id="pendingApprovalView" style="display:none">
+        <h2>⏳ ממתינים לאישור</h2>
+        <p class="sub">ההרשמה שלכם נקלטה בהצלחה! מנהל המערכת צריך לאשר את החשבון שלכם לפני
+            שתוכלו להיכנס. נסו להתחבר שוב מאוחר יותר.</p>
+    </div>
+
     <div class="tabs" id="tabs">
         <button class="tab active" data-tab="guess">הניחוש שלי</button>
         <button class="tab" data-tab="all">כל הניחושים</button>
@@ -506,6 +512,9 @@
         <div class="howto"><b>מצב מנהל:</b> הזינו את תוצאות הבחירות הרשמיות (מספר המנדטים האמיתי של כל מפלגה) ולחצו שמירה. לוח התוצאות של כולם יחושב מול המספרים האלה.</div>
         <ul id="adminBoard"></ul>
         <button class="btn-primary" id="adminSaveBtn" style="margin-top:12px">שמירת תוצאות הבחירות</button>
+
+        <div class="howto" style="margin-top:22px"><b>משתמשים שמחכים לאישור:</b> כל מי שנרשם צריך אישור לפני שהוא יכול להתחיל להשתמש באפליקציה.</div>
+        <div id="pendingUsersList"></div>
     </div>
 
     <div class="howto" id="howto">
@@ -758,6 +767,13 @@ async function registerWithUsername() {
                 uid: cred.user.uid, username: c.username, createdAt: Date.now()
             });
         } catch (_) { /* non-fatal — worst case this account can't be invited to a side bet yet */ }
+        // New accounts start unapproved — only the admin can flip this (enforced
+        // in the security rules, not just hidden client-side).
+        try {
+            await setDoc(doc(db, 'users', cred.user.uid), {
+                uid: cred.user.uid, username: c.username, approved: false, createdAt: Date.now()
+            });
+        } catch (_) { /* non-fatal — enterApp() will just treat them as unapproved */ }
     } catch (e) {
         if (e && e.code === 'auth/email-already-in-use')
             userMsg('שם המשתמש כבר תפוס — בחרו אחר או לחצו "כניסה"', 'err');
@@ -806,6 +822,7 @@ function setLoginMode(mode) {
 // ================= Screens =================
 function showLogin() {
     $('#loginCard').style.display = 'block';
+    $('#pendingApprovalView').style.display = 'none';
     $('#tabs').style.display = 'none';
     $('#guessView').style.display = 'none';
     $('#allView').style.display = 'none';
@@ -824,10 +841,36 @@ async function enterApp() {
         (synthetic ? currentUser.email.split('@')[0] : currentUser.email);
     $('#uEmail').textContent = synthetic ? 'שם משתמש' : (currentUser.email || '');
     $('#userbar').style.display = 'flex';
+
+    const isAdmin = currentUser.email === ADMIN_EMAIL;
+    $('#adminTab').style.display = isAdmin ? '' : 'none';
+
+    // Gatekeeping: every non-admin account needs the admin's manual approval
+    // before it can see or do anything. This is also enforced server-side in
+    // the security rules (predictions/sidebets writes require approved==true),
+    // so this check isn't just cosmetic — it can't be bypassed via devtools.
+    if (!isAdmin) {
+        let approved = false;
+        try {
+            const uSnap = await getDoc(doc(db, 'users', currentUser.uid));
+            approved = uSnap.exists() && uSnap.data().approved === true;
+        } catch (_) { approved = false; }
+        if (!approved) {
+            $('#pendingApprovalView').style.display = 'block';
+            $('#tabs').style.display = 'none';
+            $('#howto').style.display = 'none';
+            $('#submitbar').style.display = 'none';
+            $('#guessView').style.display = 'none';
+            $('#allView').style.display = 'none';
+            $('#leaderView').style.display = 'none';
+            $('#sidebetsView').style.display = 'none';
+            $('#adminView').style.display = 'none';
+            return;
+        }
+    }
+    $('#pendingApprovalView').style.display = 'none';
     $('#tabs').style.display = 'flex';
     $('#howto').style.display = 'block';
-
-    $('#adminTab').style.display = (currentUser.email === ADMIN_EMAIL) ? '' : 'none';
 
     // Backfill the username registry for accounts that registered before this
     // mapping existed — makes every existing user invitable to a side bet
@@ -891,7 +934,7 @@ async function enterApp() {
         }
     } catch (_) { /* not set yet */ }
 
-    if (currentUser.email === ADMIN_EMAIL) renderAdminBoard();
+    if (isAdmin) { renderAdminBoard(); loadPendingUsers(); }
     applyLockToBoard();
 }
 
@@ -1095,6 +1138,54 @@ async function saveRealResults() {
         toast('שמירה נכשלה, נסו שוב', true);
     } finally {
         btn.disabled = false;
+    }
+}
+
+// ================= Admin: pending user approvals =================
+async function loadPendingUsers() {
+    const list = $('#pendingUsersList');
+    list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    try {
+        const snaps = await getDocs(collection(db, 'users'));
+        const pending = [];
+        snaps.forEach(d => {
+            const u = d.data();
+            if (!u.approved) pending.push({ uid: d.id, ...u });
+        });
+        if (!pending.length) {
+            list.innerHTML = '<div class="lb-empty">אין משתמשים שמחכים לאישור כרגע.</div>';
+            return;
+        }
+        pending.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        list.innerHTML = '';
+        pending.forEach(u => {
+            const row = document.createElement('div');
+            row.className = 'bet-card';
+            row.innerHTML = `
+                <div class="bet-top">
+                    <div class="bet-info"><div class="bet-party">${u.username}</div></div>
+                    <div class="bet-status bet-status-pending">מחכה לאישור</div>
+                </div>
+                <div class="bet-actions"></div>`;
+            const btn = document.createElement('button');
+            btn.className = 'btn-ghost bet-accept';
+            btn.textContent = 'אשר';
+            btn.addEventListener('click', () => approveUser(u.uid));
+            row.querySelector('.bet-actions').appendChild(btn);
+            list.appendChild(row);
+        });
+    } catch (_) {
+        list.innerHTML = '<div class="lb-empty">טעינה נכשלה.</div>';
+    }
+}
+
+async function approveUser(uid) {
+    try {
+        await updateDoc(doc(db, 'users', uid), { approved: true });
+        toast('המשתמש אושר!');
+        loadPendingUsers();
+    } catch (_) {
+        toast('האישור נכשל, נסו שוב', true);
     }
 }
 

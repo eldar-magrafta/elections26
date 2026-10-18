@@ -9,18 +9,44 @@ service cloud.firestore {
              timestamp.date(2026, 10, 27) + duration.time(3, 59, 0, 0);
     }
 
-    // A player may WRITE their OWN prediction only until the deadline — after it
-    // passes, submissions are frozen (enforced here, not just in the UI, so it
-    // can't be bypassed via the console or raw API).
+    function isAdmin() {
+      return request.auth.token.email == 'eldar@users.elections26.app';
+    }
+
+    function isApproved() {
+      return isAdmin()
+             || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.approved == true;
+    }
+
+    // A player may WRITE their OWN prediction only until the deadline, and only
+    // once the admin has approved their account (enforced here, not just in the
+    // UI, so it can't be bypassed via the console or raw API).
     // Reading ANYONE ELSE's prediction (a single get, or listing the whole
     // collection) is blocked until the deadline passes — so nobody can peek at
     // others' guesses while submissions are still open.
     match /predictions/{uid} {
       allow write: if request.auth != null
                    && request.auth.uid == uid
-                   && !afterDeadline();
+                   && !afterDeadline()
+                   && isApproved();
       allow read:  if request.auth != null
                    && (request.auth.uid == uid || afterDeadline());
+    }
+
+    // Per-account approval gate. New registrations always start unapproved —
+    // nobody can approve themselves; only the admin account may flip this,
+    // and only the approved flag (identity fields are pinned on update).
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.uid == uid
+                    && request.resource.data.approved == false;
+      allow update: if request.auth != null
+                    && isAdmin()
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.username == resource.data.username;
+      allow delete: if false;
     }
 
     // The real, admin-entered election results (meta/results).
@@ -50,7 +76,8 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.creatorUid
                     && request.resource.data.creatorUid != request.resource.data.inviteeUid
-                    && request.resource.data.status == 'pending';
+                    && request.resource.data.status == 'pending'
+                    && isApproved();
       allow update: if request.auth != null
                     && request.resource.data.creatorUid == resource.data.creatorUid
                     && request.resource.data.inviteeUid == resource.data.inviteeUid
