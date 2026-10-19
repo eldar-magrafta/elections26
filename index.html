@@ -333,6 +333,20 @@
         .howto b { color: var(--ink); }
         footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 6px; }
 
+        .update-overlay {
+            position: fixed; inset: 0; z-index: 95; background: rgba(8, 15, 36, .85);
+            display: none; align-items: center; justify-content: center; padding: 24px;
+            backdrop-filter: blur(2px);
+        }
+        .update-overlay.show { display: flex; }
+        .update-card {
+            background: var(--card); border-radius: 22px; padding: 30px 24px; text-align: center;
+            max-width: 320px; box-shadow: var(--shadow);
+        }
+        .update-card .update-icon { font-size: 36px; margin-bottom: 8px; }
+        .update-card h2 { margin: 0 0 8px; font-size: 19px; font-weight: 800; }
+        .update-card p { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+
         .login-spinner-overlay {
             position: fixed; inset: 0; background: rgba(8, 15, 36, .6); backdrop-filter: blur(2px);
             display: none; align-items: center; justify-content: center; z-index: 90;
@@ -393,6 +407,14 @@
     </style>
 </head>
 <body>
+<div class="update-overlay" id="updateOverlay">
+    <div class="update-card">
+        <div class="update-icon">🔄</div>
+        <h2>גרסה חדשה זמינה</h2>
+        <p>פורסם עדכון לאפליקציה. יש לרענן כדי להמשיך.</p>
+        <button class="btn-primary" id="updateReloadBtn">רענון עכשיו</button>
+    </div>
+</div>
 <div class="wrap">
     <header class="app">
         <div class="crest">
@@ -1605,6 +1627,30 @@ document.querySelectorAll('#tabs .tab').forEach(b => b.addEventListener('click',
 tickCountdown();
 setInterval(tickCountdown, 1000);
 initFirebase();
+
+// ================= Forced live-update detection =================
+// GitHub Pages is just static hosting — pushing a change does NOT reach
+// anyone who already has this page open (even in a background tab). This
+// periodically re-checks the file's Last-Modified header (bypassing cache)
+// and, the moment it changes, blocks the whole screen behind a non-dismissible
+// overlay — the only way past it is clicking reload, so nobody keeps playing
+// on stale code without realizing it.
+let knownLastModified = null;
+async function checkForUpdate() {
+    try {
+        const res = await fetch(location.pathname + '?v=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+        const lm = res.headers.get('last-modified');
+        if (!lm) return;
+        if (knownLastModified === null) { knownLastModified = lm; return; }
+        if (lm !== knownLastModified) $('#updateOverlay').classList.add('show');
+    } catch (_) { /* offline — just try again next time */ }
+}
+$('#updateReloadBtn').addEventListener('click', () => {
+    location.href = location.pathname + '?v=' + Date.now();
+});
+checkForUpdate();
+setInterval(checkForUpdate, 3 * 60 * 1000); // every 3 minutes while the tab is open
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
 </script>
 </body>
 </html>
