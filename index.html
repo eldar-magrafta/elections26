@@ -305,6 +305,7 @@
         .sb-nums { color: var(--muted); font-size: 11.5px; white-space: nowrap; font-family: var(--num-font); }
         .sb-pts { font-family: var(--num-font); font-weight: 700; min-width: 28px; text-align: left; }
         .sb-pts.good { color: var(--good); }
+        .king-box { display: block; width: fit-content; max-width: 100%; margin: 8px auto 0; padding: 6px 12px; border: 2px solid var(--good); border-radius: 12px; color: var(--good); font-size: 13px; }
         .sb-row.bullseye { background: rgba(22,163,74,.14); border-radius: 8px; padding-inline: 6px; }
         .sb-pts.bad { color: var(--danger); }
         .sb-badge {
@@ -526,7 +527,7 @@
     </div>
 
     <div id="adminView" style="display:none">
-        <div class="howto"><b>מצב מנהל:</b> הזינו את תוצאות הבחירות הרשמיות (מספר המנדטים האמיתי של כל מפלגה) ולחצו שמירה. לוח התוצאות של כולם יחושב מול המספרים האלה.</div>
+        <div class="howto"><b>מצב מנהל:</b> הזינו את תוצאות הבחירות הרשמיות ולחצו שמירה. לוח התוצאות של כולם יחושב מול המספרים האלה.</div>
         <ul id="adminBoard"></ul>
         <button class="btn-primary" id="adminSaveBtn" style="margin-top:12px">שמירת תוצאות הבחירות</button>
 
@@ -647,6 +648,14 @@ const RAW_PARTIES = [
 const PARTIES = RAW_PARTIES.map(([id, he, logo], i) => ({
     id, he, logo: logo ? `logos/${logo}` : '', color: PALETTE[i % PALETTE.length]
 }));
+
+// הקוף — a joke "player" with no actual opinion: everyone gets a flat 10,
+// except המילואימניקים, who it's decided will get 0.
+function monkeyMandates() {
+    const m = {};
+    PARTIES.forEach(p => { m[p.id] = p.id === 'די' ? 0 : 10; });
+    return m;
+}
 
 // ---------------------------------------------------------------------
 const $ = sel => document.querySelector(sel);
@@ -1275,6 +1284,29 @@ async function loadAllGuesses() {
         crowdCard.querySelector('.top').addEventListener('click', () => crowdCard.classList.toggle('open'));
         list.appendChild(crowdCard);
 
+        // הקוף — same idea as חוכמת ההמונים above, but its "guess" is fixed
+        // (10 per party, 0 for המילואימניקים) rather than derived from players.
+        const monkeyCard = document.createElement('div');
+        monkeyCard.className = 'lb-card expandable crowd-card';
+        const monkeyGuess = monkeyMandates();
+        const monkeyRows = PARTIES
+            .slice()
+            .sort((a, b) => monkeyGuess[b.id] - monkeyGuess[a.id])
+            .map(p => `
+                <div class="sb-row">
+                    <span class="sb-badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</span>
+                    <span class="sb-name">${p.he}</span>
+                    <span class="sb-count">${monkeyGuess[p.id]}</span>
+                </div>`).join('');
+        monkeyCard.innerHTML = `
+            <div class="top">
+                <div class="name">🐒 הקוף</div>
+                <div class="sb-chevron">▾</div>
+            </div>
+            <div class="sb-breakdown">${monkeyRows}</div>`;
+        monkeyCard.querySelector('.top').addEventListener('click', () => monkeyCard.classList.toggle('open'));
+        list.appendChild(monkeyCard);
+
         players.forEach(pl => {
             const card = document.createElement('div');
             card.className = 'lb-card expandable' + (pl.uid === currentUser.uid ? ' me' : '');
@@ -1326,7 +1358,13 @@ function countBullseyes(mandates) {
 
 // Per-party point breakdown behind a player's total score (shown when a
 // leaderboard card is expanded).
-function scoreBreakdownHtml(mandates) {
+function scoreBreakdownHtml(mandates, king) {
+    const kingRow = king ? `
+            <div class="sb-row bullseye">
+                <span class="sb-name">👑 מלך הבולים</span>
+                <span class="sb-nums">הכי הרבה בולים</span>
+                <span class="sb-pts good">+${KING_BONUS}</span>
+            </div>` : '';
     return PARTIES.map(p => {
         const g = Number(mandates[p.id]) || 0;
         const r = Number(realResults[p.id]) || 0;
@@ -1340,7 +1378,7 @@ function scoreBreakdownHtml(mandates) {
                 <span class="sb-nums">ניחוש ${fmtNum(g)} · תוצאה ${r}</span>
                 <span class="sb-pts ${cls}">${sign}</span>
             </div>`;
-    }).join('');
+    }).join('') + kingRow;
 }
 
 async function loadLeaderboard() {
@@ -1373,6 +1411,9 @@ async function loadLeaderboard() {
             crowdMandates[p.id] = players.reduce((s, pl) => s + (Number(pl.mandates[p.id]) || 0), 0) / players.length;
         });
         players.push({ uid: '__crowd__', name: '🧠 חוכמת ההמונים', mandates: crowdMandates, score: computeScore(crowdMandates) });
+        // הקוף competes too, with its fixed flat-10-per-party (0 for המילואימניקים) guess.
+        const monkeyGuess = monkeyMandates();
+        players.push({ uid: '__monkey__', name: '🐒 הקוף', mandates: monkeyGuess, score: computeScore(monkeyGuess) });
         // Array.sort is stable, so full ties keep Firestore's returned order.
         players.forEach(pl => { pl.bullseyes = countBullseyes(pl.mandates); });
         // מלך הבולים: everyone sharing the highest bullseye count (at least 1) gets a bonus.
@@ -1383,7 +1424,7 @@ async function loadLeaderboard() {
         });
         const kings = players.filter(pl => pl.king);
         if (kings.length) {
-            status.innerHTML += `<div>👑 מלך הבולים (+${KING_BONUS}): <b>${kings.map(k => k.name).join(', ')}</b> · ${maxBullseyes} בולים</div>`;
+            status.innerHTML += `<div class="king-box">👑 מלך הבולים: <b>${kings.map(k => '<bdi>' + k.name + '</bdi>').join(', ')}</b> <span class="king-meta">(<bdi>${maxBullseyes}</bdi> בולים, <bdi>+${KING_BONUS}</bdi> נקודות)</span></div>`;
         }
         players.sort((a, b) => b.score - a.score || b.bullseyes - a.bullseyes);
         list.innerHTML = '';
@@ -1398,7 +1439,7 @@ async function loadLeaderboard() {
                     <div class="score ${i === 0 ? 'good' : ''}">${fmtNum(pl.score)}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
-                <div class="sb-breakdown">${scoreBreakdownHtml(pl.mandates)}</div>`;
+                <div class="sb-breakdown">${scoreBreakdownHtml(pl.mandates, pl.king)}</div>`;
             card.querySelector('.top').addEventListener('click', () => card.classList.toggle('open'));
             list.appendChild(card);
         });
