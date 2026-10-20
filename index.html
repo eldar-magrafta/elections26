@@ -279,6 +279,11 @@
             font-family: var(--num-font); font-weight: 700; font-size: 13.5px; flex-shrink: 0; border: 1.5px solid var(--line);
         }
         .lb-card.me { border: 2px solid var(--gold); box-shadow: var(--shadow); }
+        .crowd-card { background: linear-gradient(160deg, var(--navy-light), var(--navy)); color: #fff; border: 0; }
+        .crowd-card .name, .crowd-card .sb-chevron { color: #fff; }
+        .crowd-card .sb-row { border-top-color: rgba(255,255,255,.18); }
+        .crowd-card .sb-name { color: #fff; }
+        .crowd-card .sb-count { color: var(--gold-light); }
         .lb-card .name { flex: 1; font-weight: 700; font-size: 14.5px; }
         .lb-card .score { font-family: var(--num-font); font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
         .lb-card .score.good { color: var(--good); }
@@ -1233,6 +1238,30 @@ async function loadAllGuesses() {
         }
         players.sort((a, b) => (a.uid === currentUser.uid ? -1 : b.uid === currentUser.uid ? 1 : a.name.localeCompare(b.name, 'he')));
         list.innerHTML = '';
+
+        // חוכמת ההמונים — the average of everyone's guess per party, decimal
+        // on purpose (it's a statistic, not a real seat count anyone can win).
+        const crowdCard = document.createElement('div');
+        crowdCard.className = 'lb-card expandable open crowd-card';
+        const crowdRows = PARTIES
+            .slice()
+            .map(p => ({ p, avg: players.reduce((s, pl) => s + (Number(pl.mandates[p.id]) || 0), 0) / players.length }))
+            .sort((a, b) => b.avg - a.avg)
+            .map(({ p, avg }) => `
+                <div class="sb-row">
+                    <span class="sb-badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</span>
+                    <span class="sb-name">${p.he}</span>
+                    <span class="sb-count">${avg.toFixed(1)}</span>
+                </div>`).join('');
+        crowdCard.innerHTML = `
+            <div class="top">
+                <div class="name">🧠 חוכמת ההמונים</div>
+                <div class="sb-chevron">▾</div>
+            </div>
+            <div class="sb-breakdown">${crowdRows}</div>`;
+        crowdCard.querySelector('.top').addEventListener('click', () => crowdCard.classList.toggle('open'));
+        list.appendChild(crowdCard);
+
         players.forEach(pl => {
             const card = document.createElement('div');
             card.className = 'lb-card expandable' + (pl.uid === currentUser.uid ? ' me' : '');
