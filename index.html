@@ -106,14 +106,10 @@
         .cd-clock.done { font-size: 20px; font-weight: 800; padding: 6px 0; animation: pulse-soft 1.8s ease-in-out infinite; }
         @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
 
-        .userbar {
-            display: none; align-items: center; gap: 10px;
-            background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-            padding: 8px 12px; margin: 14px 0; box-shadow: var(--shadow-sm);
+        .logout-fixed {
+            position: fixed; top: calc(14px + env(safe-area-inset-top, 0px));
+            right: calc(14px + env(safe-area-inset-right, 0px)); z-index: 20;
         }
-        .userbar .who { flex: 1; min-width: 0; }
-        .userbar .who b { display: block; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .userbar .who span { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .btn-ghost {
             border: 1px solid var(--line); background: #fff; color: var(--muted);
             border-radius: 12px; padding: 8px 12px; font: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
@@ -186,17 +182,6 @@
             font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
             box-shadow: 0 0 0 2px var(--card); line-height: 1;
         }
-
-        .totalbar {
-            display: flex; align-items: center; justify-content: space-between; gap: 10px;
-            background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px;
-            margin-bottom: 10px; box-shadow: var(--shadow-sm);
-        }
-        .totalbar .lbl { font-size: 13px; font-weight: 700; color: var(--muted); }
-        .totalbar .val { font-family: var(--num-font); font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--navy); }
-        .totalbar .val.ok { color: var(--good); }
-        .totalbar .val.bad { color: var(--danger); }
-        .totalbar .hint { font-size: 12px; color: var(--muted); }
 
         .chart-card {
             background: var(--card); border: 1px solid var(--line); border-radius: 16px;
@@ -440,11 +425,7 @@
         </div>
     </div>
 
-    <div class="userbar" id="userbar">
-        <img id="uAvatar" alt="" style="display:none">
-        <div class="who"><b id="uName"></b><span id="uEmail"></span></div>
-        <button class="btn-ghost" id="logoutBtn">התנתקות</button>
-    </div>
+    <button class="btn-ghost logout-fixed" id="logoutBtn" style="display:none">התנתקות</button>
 
     <div class="login" id="loginCard">
         <div class="config-warn" id="configWarn"></div>
@@ -483,13 +464,6 @@
         <div class="chart-card">
             <div class="chart-card-title">התפלגות המנדטים שלכם</div>
             <div id="mandateChart"></div>
-        </div>
-        <div class="totalbar">
-            <div>
-                <div class="lbl">סה"כ מנדטים שחולקו</div>
-                <div class="hint">120 מנדטים לחלק בין כל המפלגות</div>
-            </div>
-            <div class="val" id="totalVal">0</div>
         </div>
         <ul id="board"></ul>
     </div>
@@ -622,7 +596,6 @@ const USER_EMAIL_DOMAIN = '@users.elections26.app';
 const PW_SALT = '#El26!';
 const MIN_PW = 5;
 const usernameToEmail = u => u.trim().toLowerCase() + USER_EMAIL_DOMAIN;
-const isSyntheticEmail = e => typeof e === 'string' && e.endsWith(USER_EMAIL_DOMAIN);
 
 // Submission deadline — polls-close time. After this moment predictions lock
 // and can no longer be saved/changed. (+02:00 = Israel Standard Time, since
@@ -856,18 +829,14 @@ function showLogin() {
     $('#leaderView').style.display = 'none';
     $('#sidebetsView').style.display = 'none';
     $('#adminView').style.display = 'none';
-    $('#userbar').style.display = 'none';
+    $('#logoutBtn').style.display = 'none';
     $('#howto').style.display = 'none';
     $('#submitbar').style.display = 'none';
 }
 
 async function enterApp() {
     $('#loginCard').style.display = 'none';
-    const synthetic = isSyntheticEmail(currentUser.email);
-    $('#uName').textContent = currentUser.displayName ||
-        (synthetic ? currentUser.email.split('@')[0] : currentUser.email);
-    $('#uEmail').textContent = synthetic ? 'שם משתמש' : (currentUser.email || '');
-    $('#userbar').style.display = 'flex';
+    $('#logoutBtn').style.display = 'block';
 
     const isAdmin = currentUser.email === ADMIN_EMAIL;
     $('#adminTab').style.display = isAdmin ? '' : 'none';
@@ -982,6 +951,15 @@ function switchTab(tab) {
 
 function clamp(n) { return Math.max(0, Math.min(MAX_MANDATES, Math.round(n))); }
 
+// Israeli electoral threshold: a party either fails to pass (0 seats) or
+// clears the minimum representation of 4 seats (3.25% of 120) — 1, 2, and 3
+// are never a real outcome, so we don't let anyone land on them either.
+function snapThreshold(v) {
+    if (v <= 0) return 0;
+    if (v < 4) return 4;
+    return v;
+}
+
 // ================= Render: my guess board =================
 // The 120 mandates are a shared budget — no party's value can push the total past 120.
 function totalGuessed() { return PARTIES.reduce((s, p) => s + (guess[p.id] || 0), 0); }
@@ -1031,9 +1009,6 @@ function syncChart() {
 
 function updateTotal() {
     const total = totalGuessed();
-    const el = $('#totalVal');
-    el.textContent = total;
-    el.className = 'val ' + (total === MAX_MANDATES ? 'ok' : '');
     // Note: we deliberately don't touch other rows' `max` attribute here —
     // lowering a range input's max below its current value forces the browser
     // to silently clamp that value too, which looked like dragging one slider
@@ -1045,9 +1020,15 @@ function updateTotal() {
     $('#submitBtn').disabled = locked || total !== MAX_MANDATES;
 }
 
-function setPartyValue(id, rawValue) {
+function setPartyValue(id, rawValue, snap = true) {
     const remaining = clamp(MAX_MANDATES - othersTotal(id));
-    const v = Math.max(0, Math.min(remaining, clamp(rawValue)));
+    let v = Math.max(0, Math.min(remaining, clamp(rawValue)));
+    if (snap) {
+        v = snapThreshold(v);
+        // Snapping up to 4 might not fit what's left of the 120-seat budget —
+        // in that case 0 is the only valid outcome left for this party.
+        if (v > remaining) v = 0;
+    }
     guess[id] = v;
     const li = document.querySelector(`#board .prow[data-id="${id}"]`);
     li.querySelector('input[type="range"]').value = v;
@@ -1083,7 +1064,13 @@ function renderBoard() {
         const range = li.querySelector('input[type="range"]');
         const num = li.querySelector('input[type="number"]');
         range.addEventListener('input', () => setPartyValue(p.id, Number(range.value)));
-        num.addEventListener('input', () => setPartyValue(p.id, Number(num.value) || 0));
+        // Don't snap while the number is still being typed — snapping on every
+        // keystroke would make it impossible to type a two-digit number like
+        // 15 (the moment you type "1" it would jump to 4). Snap once typing
+        // is actually done (blur / Enter) instead.
+        num.addEventListener('input', () => setPartyValue(p.id, Number(num.value) || 0, false));
+        num.addEventListener('blur', () => setPartyValue(p.id, Number(num.value) || 0, true));
+        num.addEventListener('keydown', e => { if (e.key === 'Enter') num.blur(); });
         attachBadgeInteractions(li, p);
         list.appendChild(li);
     });
