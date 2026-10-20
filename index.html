@@ -1747,7 +1747,8 @@ async function loadLeaderboard() {
             list.appendChild(card);
         });
     } catch (_) {
-        list.innerHTML = '<div class="lb-empty">טעינה נכשלה.</div>';
+        status.innerHTML = '';
+        list.innerHTML = '<div class="lb-empty">לוח התוצאות יופיע כשתוצאות הבחירות האמיתיות יוזנו ע"י האדמו"ר.</div>';
     }
 }
 
