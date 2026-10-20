@@ -1326,13 +1326,7 @@ function countBullseyes(mandates) {
 
 // Per-party point breakdown behind a player's total score (shown when a
 // leaderboard card is expanded).
-function scoreBreakdownHtml(mandates, king) {
-    const kingRow = king ? `
-            <div class="sb-row bullseye">
-                <span class="sb-name">👑 מלך הבולים</span>
-                <span class="sb-nums">הכי הרבה בולים</span>
-                <span class="sb-pts good">+${KING_BONUS}</span>
-            </div>` : '';
+function scoreBreakdownHtml(mandates) {
     return PARTIES.map(p => {
         const g = Number(mandates[p.id]) || 0;
         const r = Number(realResults[p.id]) || 0;
@@ -1346,7 +1340,7 @@ function scoreBreakdownHtml(mandates, king) {
                 <span class="sb-nums">ניחוש ${fmtNum(g)} · תוצאה ${r}</span>
                 <span class="sb-pts ${cls}">${sign}</span>
             </div>`;
-    }).join('') + kingRow;
+    }).join('');
 }
 
 async function loadLeaderboard() {
@@ -1387,6 +1381,10 @@ async function loadLeaderboard() {
             pl.king = maxBullseyes > 0 && pl.bullseyes === maxBullseyes;
             if (pl.king) pl.score += KING_BONUS;
         });
+        const kings = players.filter(pl => pl.king);
+        if (kings.length) {
+            status.innerHTML += `<div>👑 מלך הבולים (+${KING_BONUS}): <b>${kings.map(k => k.name).join(', ')}</b> · ${maxBullseyes} בולים</div>`;
+        }
         players.sort((a, b) => b.score - a.score || b.bullseyes - a.bullseyes);
         list.innerHTML = '';
         players.forEach((pl, i) => {
@@ -1400,7 +1398,7 @@ async function loadLeaderboard() {
                     <div class="score ${i === 0 ? 'good' : ''}">${fmtNum(pl.score)}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
-                <div class="sb-breakdown">${scoreBreakdownHtml(pl.mandates, pl.king)}</div>`;
+                <div class="sb-breakdown">${scoreBreakdownHtml(pl.mandates)}</div>`;
             card.querySelector('.top').addEventListener('click', () => card.classList.toggle('open'));
             list.appendChild(card);
         });
