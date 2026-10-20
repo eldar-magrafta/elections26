@@ -363,6 +363,27 @@
             padding: 18px 18px 14px; margin-bottom: 14px; box-shadow: var(--shadow-sm);
         }
         .side-toggle { margin-bottom: 0; }
+        /* Bonus questions (turnout + least votes) */
+        .extras-card {
+            background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+            padding: 16px 18px 6px; margin: 14px 0; box-shadow: var(--shadow-sm);
+        }
+        .extras-title { font-weight: 800; font-size: 15px; margin: 0 0 12px; text-align: right; }
+        .turnout-wrap { display: flex; align-items: center; gap: 8px; direction: ltr; justify-content: flex-end; }
+        .field .turnout-wrap input { width: 120px; text-align: center; font-family: var(--num-font); font-size: 17px; font-weight: 700; }
+        .turnout-wrap span { font-weight: 800; font-size: 17px; color: var(--muted); }
+        .field-hint { font-size: 11.5px; color: var(--muted); margin-top: 5px; text-align: right; }
+        .least-opts { display: flex; flex-direction: column; gap: 8px; }
+        .least-opt {
+            display: flex; align-items: center; gap: 10px; padding: 9px 12px; width: 100%;
+            border: 1.5px solid var(--line); border-radius: 12px; background: var(--paper);
+            font: inherit; font-weight: 700; font-size: 14px; text-align: right; cursor: pointer; color: inherit;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .least-opt img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: #fff; flex-shrink: 0; }
+        .least-opt.active { border-color: var(--navy-light); box-shadow: 0 0 0 3px rgba(36,73,168,.14); }
+        .least-opt.active::after { content: '✓'; margin-inline-start: auto; color: var(--navy-light); font-weight: 800; }
+        .extras-card.locked input, .extras-card.locked .least-opt { opacity: .55; pointer-events: none; }
         .side-btn {
             flex: 1; border: 0; background: transparent; padding: 9px 0; border-radius: 11px;
             font: inherit; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; transition: all .15s;
@@ -481,6 +502,28 @@
             <div id="mandateChart"></div>
         </div>
         <ul id="board"></ul>
+
+        <div class="extras-card" id="extrasCard">
+            <div class="extras-title">🎯 שאלות בונוס</div>
+            <div class="field">
+                <label for="turnoutInput">אחוז הצבעה ארצי</label>
+                <div class="turnout-wrap">
+                    <input id="turnoutInput" type="text" inputmode="decimal" maxlength="5" placeholder="56.84" autocomplete="off">
+                    <span>%</span>
+                </div>
+                <div class="field-hint">2 ספרות, נקודה ועוד 2 ספרות (למשל 56.84). רק המשתתף הכי קרוב מקבל <b>3+</b>.</div>
+            </div>
+            <div class="field">
+                <label>איזו מפלגה תקבל הכי מעט <b>קולות</b>?</label>
+                <div class="least-opts" id="leastOpts"></div>
+                <div class="field-hint">ניחוש נכון = <b>3+</b>.</div>
+            </div>
+            <div class="field">
+                <label>איזה סקר הכי ייתבזה?</label>
+                <div class="least-opts" id="worstPollOpts"></div>
+                <div class="field-hint">הסקר שיסיים במקום הכי נמוך בלוח התוצאות. ניחוש נכון = <b>3+</b>.</div>
+            </div>
+        </div>
     </div>
 
     <div id="allView" style="display:none">
@@ -529,6 +572,20 @@
     <div id="adminView" style="display:none">
         <div class="howto"><b>מצב מנהל:</b> הזינו את תוצאות הבחירות הרשמיות ולחצו שמירה. לוח התוצאות של כולם יחושב מול המספרים האלה.</div>
         <ul id="adminBoard"></ul>
+        <div class="extras-card">
+            <div class="extras-title">🎯 תוצאות שאלות הבונוס</div>
+            <div class="field">
+                <label for="adminTurnoutInput">אחוז הצבעה ארצי בפועל</label>
+                <div class="turnout-wrap">
+                    <input id="adminTurnoutInput" type="text" inputmode="decimal" maxlength="5" placeholder="56.84" autocomplete="off">
+                    <span>%</span>
+                </div>
+            </div>
+            <div class="field">
+                <label>איזו מפלגה קיבלה הכי מעט <b>קולות</b>?</label>
+                <div class="least-opts" id="adminLeastOpts"></div>
+            </div>
+        </div>
         <button class="btn-primary" id="adminSaveBtn" style="margin-top:12px">שמירת תוצאות הבחירות</button>
 
         <div class="howto" style="margin-top:22px"><b>משתמשים שמחכים לאישור:</b> כל מי שנרשם צריך אישור לפני שהוא יכול להתחיל להשתמש באפליקציה.</div>
@@ -539,8 +596,11 @@
         <b>איך זה עובד:</b>
         <b>ניקוד:</b> על כל מפלגה שבה פגעתם בול מקבלים <b>3+</b> נקודות, ועל כל מפלגה שבה טעיתם
         מקבלים נקודת עונשין אחת שלילית על כל מנדט הפרש (למשל טעות של 2 = 2-). מי שסכום הנקודות שלו הכי גבוה מנצח.
-        <b>מלך הבולים:</b> מי שפגע בהכי הרבה בולים מקבל בונוס של <b>3+</b> נקודות (אם כמה משתתפים חולקים את המקום הראשון בבולים, כל אחד מהם מקבל את הבונוס).
+        <b>מלך הבולים:</b> המשתתף שפגע בהכי הרבה בולים (לא כולל הקוף, חוכמת ההמונים והסקרים) מקבל בונוס של <b>3+</b> נקודות (אם כמה משתתפים חולקים את המקום הראשון בבולים, כל אחד מהם מקבל את הבונוס).
         בתיקו בנקודות, מי שפגע ביותר בולים מדורג גבוה יותר.
+        <b>שאלות בונוס:</b> מי שהכי קרוב לאחוז ההצבעה הארצי מקבל <b>3+</b> (רק משתתף אחד),
+        וכל מי שניחש נכון איזו מפלגה תקבל הכי מעט <b>קולות</b> מקבל <b>3+</b>.
+        <b>איזה סקר הכי ייתבזה:</b> הסקר (ערוץ 12 / 13 / 11) שיסיים במקום הכי נמוך בלוח התוצאות — מי שניחש נכון מקבל <b>3+</b>.
     </div>
 
     <footer>בחירות 2026 · רק לא ביני</footer>
@@ -651,6 +711,20 @@ const PARTIES = RAW_PARTIES.map(([id, he, logo], i) => ({
 
 // הקוף — a joke "player" with no actual opinion: everyone gets a flat 10,
 // except המילואימניקים, who it's decided will get 0.
+// Fixed "players" built from real polls — they compete on the leaderboard
+// just like הקוף. Party ids are the ballot letters from RAW_PARTIES.
+const POLL_PLAYERS = [
+    { uid: '__poll12__', name: '📊 סקר 12', mandates: {
+        'דרך': 24, 'מחל': 21, 'רק': 14, 'ודם': 9, 'אמת': 9, 'ל': 8, 'שס': 8,
+        'ב': 8, 'ג': 7, 'ט': 7, 'עם': 5, 'ך': 0, 'די': 0 } },
+    { uid: '__poll13__', name: '📊 סקר 13', mandates: {
+        'דרך': 18, 'מחל': 18, 'רק': 14, 'ודם': 9, 'אמת': 9, 'ל': 8, 'שס': 7,
+        'ב': 7, 'ג': 7, 'ט': 7, 'עם': 6, 'ך': 4, 'די': 4 } },
+    { uid: '__pollkan11__', name: '📊 סקר כאן 11', mandates: {
+        'דרך': 23, 'מחל': 21, 'רק': 12, 'ודם': 8, 'אמת': 9, 'ל': 8, 'שס': 8,
+        'ב': 8, 'ג': 7, 'ט': 7, 'עם': 5, 'ך': 0, 'די': 4 } }
+];
+
 function monkeyMandates() {
     const m = {};
     PARTIES.forEach(p => { m[p.id] = p.id === 'די' ? 0 : 10; });
@@ -666,6 +740,115 @@ const badgeHtml = p => p.logo
 
 // ================= Logo hover-preview (desktop) + tap lightbox (mobile) =================
 const canHoverPreview = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+// ================= Bonus questions =================
+const LEAST_VOTES_OPTIONS = ['ט', 'ך', 'די'];   // הציונות הדתית, עמך ישראל, המילואימניקים
+const TURNOUT_RE = /^\d{2}\.\d{2}$/;           // exactly "56.84"
+const TURNOUT_BONUS = 3;      // only the single closest player gets it
+const LEAST_VOTES_BONUS = 3;  // everyone who picked correctly gets it
+// "איזה סקר הכי ייתבזה" — answered automatically: the poll player that ends
+// up lowest on the leaderboard. ids match POLL_PLAYERS uids.
+const WORST_POLL_OPTIONS = [
+    { id: '__poll12__',    label: 'ערוץ 12' },
+    { id: '__poll13__',    label: 'ערוץ 13' },
+    { id: '__pollkan11__', label: 'ערוץ 11' }
+];
+const WORST_POLL_BONUS = 3;
+let worstPollIds = [];   // filled in by loadLeaderboard()
+const worstPollLabel = id => (WORST_POLL_OPTIONS.find(o => o.id === id) || {}).label || '';
+
+function parseTurnout(text) {
+    const t = String(text || '').trim();
+    return TURNOUT_RE.test(t) ? Number(t) : null;
+}
+function fmtTurnout(n) { return n == null ? '' : Number(n).toFixed(2); }
+function partyShortName(id) {
+    const p = PARTIES.find(x => x.id === id);
+    return p ? p.he.split(' - ')[0] : '';
+}
+function cleanExtras(raw) {
+    const e = raw && typeof raw === 'object' ? raw : {};
+    const t = Number(e.turnout);
+    return {
+        turnout: Number.isFinite(t) && t > 0 && t < 100 ? Math.round(t * 100) / 100 : null,
+        leastVotes: LEAST_VOTES_OPTIONS.includes(e.leastVotes) ? e.leastVotes : null,
+        worstPoll: WORST_POLL_OPTIONS.some(o => o.id === e.worstPoll) ? e.worstPoll : null
+    };
+}
+
+// Keeps the field in the "NN.NN" shape while typing: only digits are kept,
+// and the dot is inserted automatically after the first two.
+function wireTurnoutInput(input, onChange) {
+    input.addEventListener('input', () => {
+        const digits = input.value.replace(/\D/g, '').slice(0, 4);
+        input.value = digits.length > 2 ? digits.slice(0, 2) + '.' + digits.slice(2) : digits;
+        input.classList.remove('invalid');
+        onChange(parseTurnout(input.value));
+    });
+    input.addEventListener('blur', () => {
+        input.classList.toggle('invalid', input.value !== '' && parseTurnout(input.value) == null);
+    });
+}
+
+// A column of single-choice buttons. options = [{ id, label, logo? }].
+// Tapping the selected one again clears the choice.
+function renderChoiceOpts(container, options, getSel, setSel) {
+    container.innerHTML = '';
+    options.forEach(o => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'least-opt' + (getSel() === o.id ? ' active' : '');
+        b.innerHTML = (o.logo ? `<img src="${o.logo}" alt="">` : '') + `<span>${o.label}</span>`;
+        b.addEventListener('click', () => {
+            setSel(getSel() === o.id ? null : o.id);
+            renderChoiceOpts(container, options, getSel, setSel);
+        });
+        container.appendChild(b);
+    });
+}
+
+// The 3 party buttons for "הכי מעט קולות".
+function renderLeastOpts(container, getSel, setSel) {
+    const options = LEAST_VOTES_OPTIONS
+        .map(id => PARTIES.find(x => x.id === id))
+        .filter(Boolean)
+        .map(p => ({ id: p.id, label: p.he, logo: p.logo }));
+    renderChoiceOpts(container, options, getSel, setSel);
+}
+
+function renderExtras() {
+    $('#turnoutInput').value = fmtTurnout(extras.turnout);
+    $('#turnoutInput').classList.remove('invalid');
+    renderLeastOpts($('#leastOpts'), () => extras.leastVotes, v => { extras.leastVotes = v; });
+    renderChoiceOpts($('#worstPollOpts'), WORST_POLL_OPTIONS, () => extras.worstPoll, v => { extras.worstPoll = v; });
+}
+
+function renderAdminExtras() {
+    $('#adminTurnoutInput').value = fmtTurnout(realExtras.turnout);
+    $('#adminTurnoutInput').classList.remove('invalid');
+    renderLeastOpts($('#adminLeastOpts'), () => realExtras.leastVotes, v => { realExtras.leastVotes = v; });
+}
+
+// One "bonus" row per answered question, for the all-guesses cards.
+function extrasSummaryHtml(e) {
+    const rows = [];
+    if (e.turnout != null) rows.push(`
+                    <div class="sb-row">
+                        <span class="sb-name">🗳️ אחוז הצבעה</span>
+                        <span class="sb-count"><bdi>${fmtTurnout(e.turnout)}%</bdi></span>
+                    </div>`);
+    if (e.leastVotes) rows.push(`
+                    <div class="sb-row">
+                        <span class="sb-name">📉 הכי מעט קולות</span>
+                        <span class="sb-count" style="font-size:12px">${partyShortName(e.leastVotes)}</span>
+                    </div>`);
+    if (e.worstPoll) rows.push(`
+                    <div class="sb-row">
+                        <span class="sb-name">🤡 הסקר שהכי ייתבזה</span>
+                        <span class="sb-count" style="font-size:12px">${worstPollLabel(e.worstPoll)}</span>
+                    </div>`);
+    return rows.join('');
+}
 
 function attachBadgeInteractions(li, p) {
     if (!p.logo) return;
@@ -704,6 +887,10 @@ function closeLightbox() { $('#logoLightbox').classList.remove('show'); }
 let auth = null, db = null;
 let currentUser = null;
 let guess = {};  // partyId -> mandates (0-120)
+// Bonus questions. turnout = national turnout % (e.g. 56.84) or null,
+// leastVotes = partyId of the party predicted to get the fewest votes, or null.
+let extras = { turnout: null, leastVotes: null, worstPoll: null };
+let realExtras = { turnout: null, leastVotes: null, worstPoll: null }; // admin-set, after election
 let realResults = {}; // partyId -> mandates (admin-set, after election)
 let hasRealResults = false;
 let locked = false;
@@ -910,8 +1097,10 @@ async function enterApp() {
     // in-memory slider values on screen for anyone who hasn't saved a
     // prediction yet, which looks like (but isn't) their data leaking in.
     PARTIES.forEach(p => { guess[p.id] = 0; });
+    extras = { turnout: null, leastVotes: null, worstPoll: null };
     setHint('');
     renderBoard();
+    renderExtras();
     switchTab('guess');
 
     // Same reasoning for the side-bets form: a leftover "ההזמנה נשלחה!"
@@ -937,6 +1126,8 @@ async function enterApp() {
                     guess[p.id] = Number.isFinite(v) ? clamp(v) : 0;
                 });
                 renderBoard();
+                extras = cleanExtras(data.extras);
+                renderExtras();
                 const when = data.updatedAt ? new Date(data.updatedAt).toLocaleDateString('he-IL') : '';
                 setHint('נטען ניחוש שמור' + (when ? ' מ־' + when : ''));
             }
@@ -954,6 +1145,7 @@ async function enterApp() {
                 });
                 hasRealResults = true;
             }
+            realExtras = cleanExtras(data.extras);
         }
     } catch (_) { /* not set yet */ }
 
@@ -1071,6 +1263,8 @@ function resetAllGuesses() {
         li.querySelector('input[type="range"]').value = 0;
         li.querySelector('input[type="number"]').value = 0;
     });
+    extras = { turnout: null, leastVotes: null, worstPoll: null };
+    renderExtras();
     updateTotal();
     setHint('');
 }
@@ -1108,6 +1302,7 @@ function applyLockToBoard() {
     document.querySelectorAll('#board .prow').forEach(li => li.classList.toggle('locked', locked));
     $('#submitBtn').disabled = locked || totalGuessed() !== MAX_MANDATES;
     $('#resetBtn').disabled = locked;
+    $('#extrasCard').classList.toggle('locked', locked);
     if (locked) setHint('ההגשה נעולה — המועד האחרון עבר');
 }
 
@@ -1118,6 +1313,12 @@ async function submitGuess() {
     if (!currentUser || !db) return;
     if (locked) { toast('ההגשה נסגרה — המועד האחרון עבר', true); return; }
     if (totalGuessed() !== MAX_MANDATES) { toast('צריך לחלק בדיוק 120 מנדטים לפני השמירה', true); return; }
+    const turnoutText = $('#turnoutInput').value.trim();
+    if (turnoutText !== '' && parseTurnout(turnoutText) == null) {
+        $('#turnoutInput').classList.add('invalid');
+        toast('אחוז הצבעה צריך להיות בפורמט 56.84', true);
+        return;
+    }
     setSubmitting(true);
     try {
         await setDoc(doc(db, 'predictions', currentUser.uid), {
@@ -1126,6 +1327,7 @@ async function submitGuess() {
             email: currentUser.email || '',
             season: SEASON,
             mandates: { ...guess },
+            extras: { turnout: extras.turnout, leastVotes: extras.leastVotes, worstPoll: extras.worstPoll },
             updatedAt: Date.now()
         });
         toast('הניחוש נשמר! 🗳️');
@@ -1161,16 +1363,24 @@ function renderAdminBoard() {
         attachBadgeInteractions(li, p);
         list.appendChild(li);
     });
+    renderAdminExtras();
 }
 
 async function saveRealResults() {
     if (!currentUser || currentUser.email !== ADMIN_EMAIL) return;
+    const adminTurnoutText = $('#adminTurnoutInput').value.trim();
+    if (adminTurnoutText !== '' && parseTurnout(adminTurnoutText) == null) {
+        $('#adminTurnoutInput').classList.add('invalid');
+        toast('אחוז הצבעה צריך להיות בפורמט 56.84', true);
+        return;
+    }
     const btn = $('#adminSaveBtn');
     btn.disabled = true;
     try {
         await setDoc(doc(db, 'meta', 'results'), {
             season: SEASON,
             mandates: { ...realResults },
+            extras: { turnout: realExtras.turnout, leastVotes: realExtras.leastVotes },
             updatedAt: Date.now()
         });
         hasRealResults = true;
@@ -1252,7 +1462,7 @@ async function loadAllGuesses() {
         snaps.forEach(d => {
             const p = d.data();
             if (!p.mandates) return;
-            players.push({ uid: p.uid || d.id, name: p.name || p.email || 'שחקן', mandates: p.mandates });
+            players.push({ uid: p.uid || d.id, name: p.name || p.email || 'שחקן', mandates: p.mandates, extras: cleanExtras(p.extras) });
         });
         if (!players.length) {
             list.innerHTML = '<div class="lb-empty">אין ניחושים שמורים.</div>';
@@ -1264,7 +1474,7 @@ async function loadAllGuesses() {
         // חוכמת ההמונים — the average of everyone's guess per party, decimal
         // on purpose (it's a statistic, not a real seat count anyone can win).
         const crowdCard = document.createElement('div');
-        crowdCard.className = 'lb-card expandable open crowd-card';
+        crowdCard.className = 'lb-card expandable crowd-card';
         const crowdRows = PARTIES
             .slice()
             .map(p => ({ p, avg: players.reduce((s, pl) => s + (Number(pl.mandates[p.id]) || 0), 0) / players.length }))
@@ -1307,6 +1517,29 @@ async function loadAllGuesses() {
         monkeyCard.querySelector('.top').addEventListener('click', () => monkeyCard.classList.toggle('open'));
         list.appendChild(monkeyCard);
 
+        // The poll "players" — same card style as הקוף.
+        POLL_PLAYERS.forEach(poll => {
+            const pollCard = document.createElement('div');
+            pollCard.className = 'lb-card expandable crowd-card';
+            const pollRows = PARTIES
+                .slice()
+                .sort((a, b) => (poll.mandates[b.id] || 0) - (poll.mandates[a.id] || 0))
+                .map(p => `
+                <div class="sb-row">
+                    <span class="sb-badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</span>
+                    <span class="sb-name">${p.he}</span>
+                    <span class="sb-count">${poll.mandates[p.id] || 0}</span>
+                </div>`).join('');
+            pollCard.innerHTML = `
+            <div class="top">
+                <div class="name">${poll.name}</div>
+                <div class="sb-chevron">▾</div>
+            </div>
+            <div class="sb-breakdown">${pollRows}</div>`;
+            pollCard.querySelector('.top').addEventListener('click', () => pollCard.classList.toggle('open'));
+            list.appendChild(pollCard);
+        });
+
         players.forEach(pl => {
             const card = document.createElement('div');
             card.className = 'lb-card expandable' + (pl.uid === currentUser.uid ? ' me' : '');
@@ -1324,7 +1557,7 @@ async function loadAllGuesses() {
                     <div class="name">${pl.name}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
-                <div class="sb-breakdown">${rows || '<div class="sb-row"><span class="sb-name">אין ניחוש</span></div>'}</div>`;
+                <div class="sb-breakdown">${rows || '<div class="sb-row"><span class="sb-name">אין ניחוש</span></div>'}${extrasSummaryHtml(pl.extras)}</div>`;
             card.querySelector('.top').addEventListener('click', () => card.classList.toggle('open'));
             list.appendChild(card);
         });
@@ -1358,7 +1591,7 @@ function countBullseyes(mandates) {
 
 // Per-party point breakdown behind a player's total score (shown when a
 // leaderboard card is expanded).
-function scoreBreakdownHtml(mandates, king) {
+function scoreBreakdownHtml(mandates, king, pl) {
     const kingRow = king ? `
             <div class="sb-row bullseye">
                 <span class="sb-name">👑 מלך הבולים</span>
@@ -1378,7 +1611,36 @@ function scoreBreakdownHtml(mandates, king) {
                 <span class="sb-nums">ניחוש ${fmtNum(g)} · תוצאה ${r}</span>
                 <span class="sb-pts ${cls}">${sign}</span>
             </div>`;
-    }).join('') + kingRow;
+    }).join('') + kingRow + extrasBreakdownHtml(pl);
+}
+
+// Bonus-question rows for a real player's leaderboard card (crowd/monkey don't answer them).
+function extrasBreakdownHtml(pl) {
+    if (!pl || !pl.real) return '';
+    const e = pl.extras || {};
+    const row = (name, nums, pts) => `
+            <div class="sb-row${pts > 0 ? ' bullseye' : ''}">
+                <span class="sb-name">${name}</span>
+                <span class="sb-nums">${nums}</span>
+                <span class="sb-pts ${pts > 0 ? 'good' : ''}">${pts > 0 ? '+' + pts : '0'}</span>
+            </div>`;
+    let html = '';
+    if (realExtras.turnout != null) {
+        html += row('🗳️ אחוז הצבעה',
+            `ניחוש <bdi>${e.turnout != null ? fmtTurnout(e.turnout) + '%' : '—'}</bdi> · תוצאה <bdi>${fmtTurnout(realExtras.turnout)}%</bdi>`,
+            pl.turnoutWin ? TURNOUT_BONUS : 0);
+    }
+    if (realExtras.leastVotes) {
+        html += row('📉 הכי מעט קולות',
+            `ניחוש ${e.leastVotes ? partyShortName(e.leastVotes) : '—'} · תוצאה ${partyShortName(realExtras.leastVotes)}`,
+            pl.leastHit ? LEAST_VOTES_BONUS : 0);
+    }
+    if (worstPollIds.length) {
+        html += row('🤡 הסקר שהכי ייתבזה',
+            `ניחוש ${e.worstPoll ? worstPollLabel(e.worstPoll) : '—'} · תוצאה ${worstPollIds.map(worstPollLabel).join(' / ')}`,
+            pl.worstPollHit ? WORST_POLL_BONUS : 0);
+    }
+    return html;
 }
 
 async function loadLeaderboard() {
@@ -1398,7 +1660,8 @@ async function loadLeaderboard() {
         snaps.forEach(d => {
             const p = d.data();
             if (!p.mandates) return;
-            players.push({ uid: p.uid || d.id, name: p.name || p.email || 'שחקן', mandates: p.mandates, score: computeScore(p.mandates) });
+            players.push({ uid: p.uid || d.id, name: p.name || p.email || 'שחקן', mandates: p.mandates, score: computeScore(p.mandates),
+                           real: true, extras: cleanExtras(p.extras), updatedAt: Number(p.updatedAt) || 0 });
         });
         if (!players.length) {
             list.innerHTML = '<div class="lb-empty">אין ניחושים שמורים.</div>';
@@ -1414,17 +1677,58 @@ async function loadLeaderboard() {
         // הקוף competes too, with its fixed flat-10-per-party (0 for המילואימניקים) guess.
         const monkeyGuess = monkeyMandates();
         players.push({ uid: '__monkey__', name: '🐒 הקוף', mandates: monkeyGuess, score: computeScore(monkeyGuess) });
+        // The polls compete too, each with its fixed published numbers.
+        POLL_PLAYERS.forEach(poll => {
+            players.push({ uid: poll.uid, name: poll.name, mandates: { ...poll.mandates }, score: computeScore(poll.mandates) });
+        });
         // Array.sort is stable, so full ties keep Firestore's returned order.
         players.forEach(pl => { pl.bullseyes = countBullseyes(pl.mandates); });
-        // מלך הבולים: everyone sharing the highest bullseye count (at least 1) gets a bonus.
-        const maxBullseyes = Math.max(...players.map(pl => pl.bullseyes));
+        // מלך הבולים: among REAL players only (not the crowd, the monkey or the
+        // polls), everyone sharing the highest bullseye count (at least 1) gets a bonus.
+        const maxBullseyes = Math.max(0, ...players.filter(pl => pl.real).map(pl => pl.bullseyes));
         players.forEach(pl => {
-            pl.king = maxBullseyes > 0 && pl.bullseyes === maxBullseyes;
+            pl.king = !!pl.real && maxBullseyes > 0 && pl.bullseyes === maxBullseyes;
             if (pl.king) pl.score += KING_BONUS;
         });
         const kings = players.filter(pl => pl.king);
         if (kings.length) {
             status.innerHTML += `<div class="king-box">👑 מלך הבולים: <b>${kings.map(k => '<bdi>' + k.name + '</bdi>').join(', ')}</b> <span class="king-meta">(<bdi>${maxBullseyes}</bdi> בולים, <bdi>+${KING_BONUS}</bdi> נקודות)</span></div>`;
+        }
+        // Bonus questions (real players only).
+        // Turnout: exactly ONE winner — the closest guess. Compared in whole
+        // hundredths (5684 instead of 56.84) so float rounding can't fake a
+        // difference. On an exact tie, whoever saved their prediction first wins.
+        let turnoutWinner = null;
+        if (realExtras.turnout != null) {
+            const realH = Math.round(realExtras.turnout * 100);
+            const dist = pl => Math.abs(Math.round(pl.extras.turnout * 100) - realH);
+            const cands = players.filter(pl => pl.real && pl.extras.turnout != null)
+                                 .sort((a, b) => dist(a) - dist(b) || a.updatedAt - b.updatedAt);
+            turnoutWinner = cands[0] || null;
+        }
+        // Worst poll: the poll player ranked lowest by the same order as the
+        // leaderboard (score, then bullseyes). If polls are fully tied for last,
+        // every one of them counts as a correct answer.
+        const polls = players.filter(pl => WORST_POLL_OPTIONS.some(o => o.id === pl.uid));
+        worstPollIds = [];
+        if (polls.length) {
+            const rankKey = pl => pl.score * 1000 + pl.bullseyes;
+            const minKey = Math.min(...polls.map(rankKey));
+            worstPollIds = polls.filter(pl => rankKey(pl) === minKey).map(pl => pl.uid);
+        }
+        players.forEach(pl => {
+            pl.worstPollHit = !!(pl.real && pl.extras.worstPoll && worstPollIds.includes(pl.extras.worstPoll));
+            if (pl.worstPollHit) pl.score += WORST_POLL_BONUS;
+            pl.turnoutWin = pl === turnoutWinner;
+            pl.leastHit = !!(pl.real && realExtras.leastVotes && pl.extras.leastVotes === realExtras.leastVotes);
+            if (pl.turnoutWin) pl.score += TURNOUT_BONUS;
+            if (pl.leastHit) pl.score += LEAST_VOTES_BONUS;
+        });
+        if (turnoutWinner) {
+            status.innerHTML += `<div class="king-box">🗳️ הכי קרוב באחוז ההצבעה: <b><bdi>${turnoutWinner.name}</bdi></b> <span class="king-meta">(ניחש <bdi>${fmtTurnout(turnoutWinner.extras.turnout)}%</bdi>, בפועל <bdi>${fmtTurnout(realExtras.turnout)}%</bdi>, <bdi>+${TURNOUT_BONUS}</bdi> נקודות)</span></div>`;
+        }
+        if (worstPollIds.length) {
+            status.innerHTML += `<div class="king-box">🤡 הסקר שהכי התבזה: <b>${worstPollIds.map(worstPollLabel).join(' / ')}</b> <span class="king-meta">(מי שניחש נכון: <bdi>+${WORST_POLL_BONUS}</bdi> נקודות)</span></div>`;
         }
         players.sort((a, b) => b.score - a.score || b.bullseyes - a.bullseyes);
         list.innerHTML = '';
@@ -1439,7 +1743,7 @@ async function loadLeaderboard() {
                     <div class="score ${i === 0 ? 'good' : ''}">${fmtNum(pl.score)}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
-                <div class="sb-breakdown">${scoreBreakdownHtml(pl.mandates, pl.king)}</div>`;
+                <div class="sb-breakdown">${scoreBreakdownHtml(pl.mandates, pl.king, pl)}</div>`;
             card.querySelector('.top').addEventListener('click', () => card.classList.toggle('open'));
             list.appendChild(card);
         });
@@ -1706,13 +2010,11 @@ function tickCountdown() {
     const box = $('#countdown');
     locked = diff <= 0;
     if (locked) {
-        box.classList.add('closed');
-        $('#cdClock').classList.add('done');
-        $('#cdClock').innerHTML = '🔒 ההגשה נסגרה';
-        if ($('#cdDeadlineText')) $('#cdDeadlineText').textContent = '';
+        box.style.display = 'none';
         applyLockToBoard();
         return;
     }
+    box.style.display = '';
     box.classList.remove('closed');
     const s = Math.floor(diff / 1000);
     const d = Math.floor(s / 86400);
@@ -1750,6 +2052,9 @@ $('#logoutBtn').addEventListener('click', logout);
 $('#submitBtn').addEventListener('click', submitGuess);
 $('#resetBtn').addEventListener('click', resetAllGuesses);
 $('#adminSaveBtn').addEventListener('click', saveRealResults);
+wireTurnoutInput($('#turnoutInput'), v => { extras.turnout = v; });
+wireTurnoutInput($('#adminTurnoutInput'), v => { realExtras.turnout = v; });
+renderExtras();
 $('#createBetBtn').addEventListener('click', createSideBet);
 document.querySelectorAll('.side-btn').forEach(b => b.addEventListener('click', () => {
     betSide = b.dataset.side;
