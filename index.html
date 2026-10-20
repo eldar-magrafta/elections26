@@ -1293,6 +1293,7 @@ async function loadAllGuesses() {
 //   -|guess - real|  otherwise (every seat off costs one point)
 // Highest total wins.
 const BULLSEYE_BONUS = 3;
+const fmtNum = n => String(Math.round(n * 10) / 10);
 function computeScore(mandates) {
     let score = 0;
     PARTIES.forEach(p => {
@@ -1313,11 +1314,11 @@ function scoreBreakdownHtml(mandates) {
         const diff = Math.abs(g - r);
         const pts = diff === 0 ? BULLSEYE_BONUS : -diff;
         const cls = pts > 0 ? 'good' : pts < 0 ? 'bad' : '';
-        const sign = pts > 0 ? ('+' + pts) : String(pts);
+        const sign = pts > 0 ? ('+' + fmtNum(pts)) : fmtNum(pts);
         return `
             <div class="sb-row">
                 <span class="sb-name">${p.he}</span>
-                <span class="sb-nums">ניחוש ${g} · תוצאה ${r}</span>
+                <span class="sb-nums">ניחוש ${fmtNum(g)} · תוצאה ${r}</span>
                 <span class="sb-pts ${cls}">${sign}</span>
             </div>`;
     }).join('');
@@ -1346,6 +1347,13 @@ async function loadLeaderboard() {
             list.innerHTML = '<div class="lb-empty">אין ניחושים שמורים.</div>';
             return;
         }
+        // חוכמת ההמונים competes as a regular player, using the per-party
+        // average of the real players' guesses (decimals are kept).
+        const crowdMandates = {};
+        PARTIES.forEach(p => {
+            crowdMandates[p.id] = players.reduce((s, pl) => s + (Number(pl.mandates[p.id]) || 0), 0) / players.length;
+        });
+        players.push({ uid: '__crowd__', name: '🧠 חוכמת ההמונים', mandates: crowdMandates, score: computeScore(crowdMandates) });
         players.sort((a, b) => b.score - a.score);
         list.innerHTML = '';
         players.forEach((pl, i) => {
@@ -1356,7 +1364,7 @@ async function loadLeaderboard() {
                 <div class="top">
                     <div class="rank">${medal}</div>
                     <div class="name">${pl.name}</div>
-                    <div class="score ${i === 0 ? 'good' : ''}">${pl.score}</div>
+                    <div class="score ${i === 0 ? 'good' : ''}">${fmtNum(pl.score)}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
                 <div class="sb-breakdown">${scoreBreakdownHtml(pl.mandates)}</div>`;
