@@ -382,6 +382,15 @@
         }
         .bet-status-accepted { background: rgba(14,168,148,.14); color: var(--teal); }
         .bet-status-declined, .bet-status-cancelled { background: rgba(226,59,78,.12); color: var(--danger); }
+        .bet-status-won { background: rgba(14,168,148,.14); color: var(--teal); }
+        .bet-status-lost { background: rgba(226,59,78,.12); color: var(--danger); }
+        .bet-record { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; }
+        .bet-record h3 { margin: 0 0 8px; font-size: 14px; }
+        .bet-record-row { display: flex; gap: 10px; padding: 5px 0; font-size: 13px; border-top: 1px solid var(--line); }
+        .bet-record-row.me { font-weight: 700; }
+        .bet-record-row .rn { flex: 1; }
+        .bet-record-row .rw { color: var(--teal); }
+        .bet-record-row .rl { color: var(--danger); }
         .bet-outcome {
             margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line);
             font-size: 12.5px; color: var(--muted);
@@ -511,6 +520,7 @@
             <div class="user-msg" id="betMsg"></div>
             <button class="btn-primary" id="createBetBtn">שלח הזמנה</button>
         </div>
+        <div id="betRecord"></div>
         <div id="sidebetsList"></div>
     </div>
 
@@ -1512,6 +1522,44 @@ function updateSidebetsBadge(bets) {
     }
 }
 
+// Settles an accepted bet against the real results. Lines are always x.5, so
+// there are no pushes. Returns null while it can't be settled yet.
+function settleBet(bet) {
+    const party = partyById(bet.partyId);
+    if (bet.status !== 'accepted' || !hasRealResults || !party) return null;
+    const real = Number(realResults[party.id]) || 0;
+    const actual = real > bet.line ? 'over' : 'under';
+    const creatorWon = actual === bet.creatorSide;
+    return {
+        real, actual,
+        winnerUid: creatorWon ? bet.creatorUid : bet.inviteeUid,
+        loserUid: creatorWon ? bet.inviteeUid : bet.creatorUid,
+        winnerName: creatorWon ? bet.creatorName : bet.inviteeName,
+        loserName: creatorWon ? bet.inviteeName : bet.creatorName
+    };
+}
+
+function renderBetRecord(bets) {
+    const el = $('#betRecord');
+    const rec = new Map();
+    bets.forEach(b => {
+        const s = settleBet(b);
+        if (!s) return;
+        [[s.winnerUid, s.winnerName, 'w'], [s.loserUid, s.loserName, 'l']].forEach(([uid, name, k]) => {
+            if (!rec.has(uid)) rec.set(uid, { uid, name, w: 0, l: 0 });
+            rec.get(uid)[k]++;
+        });
+    });
+    if (!rec.size) { el.innerHTML = ''; return; }
+    const rows = [...rec.values()].sort((a, b) => (b.w - b.l) - (a.w - a.l) || b.w - a.w);
+    el.innerHTML = '<div class="bet-record"><h3>רשומת הימורים</h3>' + rows.map(r => `
+        <div class="bet-record-row${currentUser && r.uid === currentUser.uid ? ' me' : ''}">
+            <span class="rn">${r.name}</span>
+            <span class="rw">ניצחונות ${r.w}</span>
+            <span class="rl">הפסדים ${r.l}</span>
+        </div>`).join('') + '</div>';
+}
+
 function renderBetCard(bet) {
     const party = partyById(bet.partyId);
     const card = document.createElement('div');
@@ -1519,11 +1567,13 @@ function renderBetCard(bet) {
     const otherSide = bet.creatorSide === 'over' ? 'under' : 'over';
 
     let outcomeHtml = '';
-    if (bet.status === 'accepted' && hasRealResults && party) {
-        const real = realResults[party.id] || 0;
-        const actual = real > bet.line ? 'over' : 'under';
-        const winnerName = actual === bet.creatorSide ? bet.creatorName : bet.inviteeName;
-        outcomeHtml = `<div class="bet-outcome">תוצאה בפועל: ${real} מנדטים (${sideLabel(actual)}) · ניצח/ה: <b>${winnerName}</b></div>`;
+    let statusKey = bet.status, statusText = BET_STATUS_LABEL[bet.status] || bet.status;
+    const s = settleBet(bet);
+    if (s) {
+        outcomeHtml = `<div class="bet-outcome">תוצאה בפועל: ${s.real} מנדטים (${sideLabel(s.actual)}) · ניצח/ה: <b>${s.winnerName}</b></div>`;
+        if (currentUser && currentUser.uid === s.winnerUid) { statusKey = 'won'; statusText = 'ניצחת'; }
+        else if (currentUser && currentUser.uid === s.loserUid) { statusKey = 'lost'; statusText = 'הפסדת'; }
+        else statusText = 'הוכרע';
     }
 
     card.innerHTML = `
@@ -1532,7 +1582,7 @@ function renderBetCard(bet) {
                 <div class="bet-party">${party ? party.he : 'מפלגה לא ידועה'} · קו ${bet.line}</div>
                 <div class="bet-sides">${bet.creatorName} (${sideLabel(bet.creatorSide)}) <span class="bet-vs">מול</span> ${bet.inviteeName} (${sideLabel(otherSide)})</div>
             </div>
-            <div class="bet-status bet-status-${bet.status}">${BET_STATUS_LABEL[bet.status] || bet.status}</div>
+            <div class="bet-status bet-status-${statusKey}">${statusText}</div>
         </div>
         ${outcomeHtml}
         <div class="bet-actions"></div>`;
@@ -1574,6 +1624,7 @@ async function loadSidebets() {
             bets.push({ id: d.id, ...data });
         });
         updateSidebetsBadge(bets);
+        renderBetRecord(bets);
         if (!bets.length) {
             list.innerHTML = '<div class="lb-empty">אין עדיין הימורים צדדיים. היו הראשונים!</div>';
             return;
