@@ -6,7 +6,7 @@ service cloud.firestore {
     // 27 Oct 2026, 05:59 Israel Standard Time (UTC+2) = 03:59 UTC.
     function afterDeadline() {
       return request.time >
-             timestamp.date(2025, 10, 27) + duration.time(3, 59, 0, 0);
+             timestamp.date(2026, 10, 27) + duration.time(3, 59, 0, 0);
     }
 
     function isAdmin() {
