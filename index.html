@@ -305,6 +305,7 @@
         .sb-nums { color: var(--muted); font-size: 11.5px; white-space: nowrap; font-family: var(--num-font); }
         .sb-pts { font-family: var(--num-font); font-weight: 700; min-width: 28px; text-align: left; }
         .sb-pts.good { color: var(--good); }
+        .sb-row.bullseye { background: rgba(22,163,74,.14); border-radius: 8px; padding-inline: 6px; }
         .sb-pts.bad { color: var(--danger); }
         .sb-badge {
             width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
@@ -537,6 +538,8 @@
         <b>איך זה עובד:</b>
         <b>ניקוד:</b> על כל מפלגה שבה פגעתם בול מקבלים <b>3+</b> נקודות, ועל כל מפלגה שבה טעיתם
         מקבלים נקודת עונשין אחת שלילית על כל מנדט הפרש (למשל טעות של 2 = 2-). מי שסכום הנקודות שלו הכי גבוה מנצח.
+        <b>מלך הבולים:</b> מי שפגע בהכי הרבה בולים מקבל בונוס של <b>3+</b> נקודות (אם כמה משתתפים חולקים את המקום הראשון בבולים, כל אחד מהם מקבל את הבונוס).
+        בתיקו בנקודות, מי שפגע ביותר בולים מדורג גבוה יותר.
     </div>
 
     <footer>בחירות 2026 · רק לא ביני</footer>
@@ -1301,8 +1304,9 @@ async function loadAllGuesses() {
 // Score per player = Σ over all parties of:
 //   +3  if the guess exactly matches the real result (a "bullseye")
 //   -|guess - real|  otherwise (every seat off costs one point)
-// Highest total wins.
+// Highest total wins. The player(s) with the most bullseyes also get KING_BONUS.
 const BULLSEYE_BONUS = 3;
+const KING_BONUS = 3;
 const fmtNum = n => String(Math.round(n * 10) / 10);
 function computeScore(mandates) {
     let score = 0;
@@ -1315,9 +1319,19 @@ function computeScore(mandates) {
     return score;
 }
 
+function countBullseyes(mandates) {
+    return PARTIES.filter(p => (Number(mandates[p.id]) || 0) === (Number(realResults[p.id]) || 0)).length;
+}
+
 // Per-party point breakdown behind a player's total score (shown when a
 // leaderboard card is expanded).
-function scoreBreakdownHtml(mandates) {
+function scoreBreakdownHtml(mandates, king) {
+    const kingRow = king ? `
+            <div class="sb-row bullseye">
+                <span class="sb-name">👑 מלך הבולים</span>
+                <span class="sb-nums">הכי הרבה בולים</span>
+                <span class="sb-pts good">+${KING_BONUS}</span>
+            </div>` : '';
     return PARTIES.map(p => {
         const g = Number(mandates[p.id]) || 0;
         const r = Number(realResults[p.id]) || 0;
@@ -1326,12 +1340,12 @@ function scoreBreakdownHtml(mandates) {
         const cls = pts > 0 ? 'good' : pts < 0 ? 'bad' : '';
         const sign = pts > 0 ? ('+' + fmtNum(pts)) : fmtNum(pts);
         return `
-            <div class="sb-row">
+            <div class="sb-row${diff === 0 ? ' bullseye' : ''}">
                 <span class="sb-name">${p.he}</span>
                 <span class="sb-nums">ניחוש ${fmtNum(g)} · תוצאה ${r}</span>
                 <span class="sb-pts ${cls}">${sign}</span>
             </div>`;
-    }).join('');
+    }).join('') + kingRow;
 }
 
 async function loadLeaderboard() {
@@ -1364,7 +1378,15 @@ async function loadLeaderboard() {
             crowdMandates[p.id] = players.reduce((s, pl) => s + (Number(pl.mandates[p.id]) || 0), 0) / players.length;
         });
         players.push({ uid: '__crowd__', name: '🧠 חוכמת ההמונים', mandates: crowdMandates, score: computeScore(crowdMandates) });
-        players.sort((a, b) => b.score - a.score);
+        // Array.sort is stable, so full ties keep Firestore's returned order.
+        players.forEach(pl => { pl.bullseyes = countBullseyes(pl.mandates); });
+        // מלך הבולים: everyone sharing the highest bullseye count (at least 1) gets a bonus.
+        const maxBullseyes = Math.max(...players.map(pl => pl.bullseyes));
+        players.forEach(pl => {
+            pl.king = maxBullseyes > 0 && pl.bullseyes === maxBullseyes;
+            if (pl.king) pl.score += KING_BONUS;
+        });
+        players.sort((a, b) => b.score - a.score || b.bullseyes - a.bullseyes);
         list.innerHTML = '';
         players.forEach((pl, i) => {
             const card = document.createElement('div');
@@ -1377,7 +1399,7 @@ async function loadLeaderboard() {
                     <div class="score ${i === 0 ? 'good' : ''}">${fmtNum(pl.score)}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
-                <div class="sb-breakdown">${scoreBreakdownHtml(pl.mandates)}</div>`;
+                <div class="sb-breakdown">${scoreBreakdownHtml(pl.mandates, pl.king)}</div>`;
             card.querySelector('.top').addEventListener('click', () => card.classList.toggle('open'));
             list.appendChild(card);
         });
