@@ -741,7 +741,7 @@ const badgeHtml = p => p.logo
 const canHoverPreview = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 // ================= Bonus questions =================
-const LEAST_VOTES_OPTIONS = ['ט', 'ך', 'די'];   // הציונות הדתית, עמך ישראל, המילואימניקים
+const LEAST_VOTES_OPTIONS = ['ט', 'ך', 'די', 'עם'];   // הציונות הדתית, עמך ישראל, המילואימניקים, רע"ם
 const TURNOUT_RE = /^\d{2}\.\d{2}$/;           // exactly "56.84"
 const TURNOUT_BONUS = 3;      // only the single closest player gets it
 const LEAST_VOTES_BONUS = 3;  // everyone who picked correctly gets it
@@ -806,7 +806,7 @@ function renderChoiceOpts(container, options, getSel, setSel) {
     });
 }
 
-// The 3 party buttons for "הכי מעט קולות".
+// The party buttons for "הכי מעט קולות".
 function renderLeastOpts(container, getSel, setSel) {
     const options = LEAST_VOTES_OPTIONS
         .map(id => PARTIES.find(x => x.id === id))
