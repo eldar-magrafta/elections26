@@ -21,6 +21,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.js"></script>
 
     <style>
         :root {
@@ -263,6 +264,8 @@
         .submitbar button:disabled { opacity: .55; }
         .submitbar button:active:not(:disabled) { transform: scale(.98) translateY(1px); }
         .save-hint { text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
+        .save-missing { color: var(--danger); font-weight: 600; }
+        .save-missing:empty { display: none; }
         .spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: spin .7s linear infinite; display: inline-block; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -314,6 +317,21 @@
             border: 1.5px solid var(--line); background: var(--paper);
         }
         .sb-badge img { width: 100%; height: 100%; object-fit: contain; }
+        /* "כל הניחושים" sub-tabs: לפי משתמשים / לפי מפלגות */
+        .subtabs {
+            display: flex; gap: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 4px; margin: 0 auto 12px; max-width: 320px; box-shadow: var(--shadow-sm);
+        }
+        .subtab {
+            flex: 1; border: 0; background: transparent; padding: 7px 4px; border-radius: 9px;
+            font: inherit; font-weight: 700; font-size: 12.5px; color: var(--muted); cursor: pointer;
+        }
+        .subtab.active { background: var(--paper); color: var(--navy); }
+        /* לפי מפלגות: a card per party, opening to every player's guess for it */
+        .lb-card.open .sb-breakdown.tall { max-height: 8000px; }
+        .party-card .top .sb-badge { width: 30px; height: 30px; }
+        .party-card .avg { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+        .sb-row.me-row { background: rgba(255,183,3,.18); border-radius: 8px; padding-inline: 6px; }
         .sb-count { font-family: var(--num-font); font-weight: 700; font-size: 13px; min-width: 20px; text-align: left; }
 
         .toast {
@@ -528,7 +546,12 @@
 
     <div id="allView" style="display:none">
         <div id="allStatus" style="margin-bottom:10px;color:var(--muted);font-size:13px;text-align:center"></div>
+        <div class="subtabs" id="allSubtabs" style="display:none">
+            <button class="subtab active" data-sub="users">לפי משתמשים</button>
+            <button class="subtab" data-sub="parties">לפי מפלגות</button>
+        </div>
         <div id="allList"></div>
+        <div id="allByParty" style="display:none"></div>
     </div>
 
     <div id="leaderView" style="display:none">
@@ -613,6 +636,7 @@
             <button id="resetBtn">אפס הכל</button>
         </div>
         <div class="save-hint" id="saveHint"></div>
+        <div class="save-hint save-missing" id="saveMissing"></div>
     </div>
 </div>
 
@@ -740,6 +764,13 @@ const badgeHtml = p => p.logo
 // ================= Logo hover-preview (desktop) + tap lightbox (mobile) =================
 const canHoverPreview = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
+// ================= HTML escaping =================
+// Turns user-controlled text (usernames etc.) into plain text before it goes
+// into innerHTML, so a name like "<img onerror=...>" is shown, not executed.
+function esc(t) {
+    return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 // ================= Bonus questions =================
 const LEAST_VOTES_OPTIONS = ['ט', 'ך', 'די', 'עם'];   // הציונות הדתית, עמך ישראל, המילואימניקים, רע"ם
 const TURNOUT_RE = /^\d{2}\.\d{2}$/;           // exactly "56.84"
@@ -818,8 +849,9 @@ function renderLeastOpts(container, getSel, setSel) {
 function renderExtras() {
     $('#turnoutInput').value = fmtTurnout(extras.turnout);
     $('#turnoutInput').classList.remove('invalid');
-    renderLeastOpts($('#leastOpts'), () => extras.leastVotes, v => { extras.leastVotes = v; });
-    renderChoiceOpts($('#worstPollOpts'), WORST_POLL_OPTIONS, () => extras.worstPoll, v => { extras.worstPoll = v; });
+    renderLeastOpts($('#leastOpts'), () => extras.leastVotes, v => { extras.leastVotes = v; refreshSubmitState(); });
+    renderChoiceOpts($('#worstPollOpts'), WORST_POLL_OPTIONS, () => extras.worstPoll, v => { extras.worstPoll = v; refreshSubmitState(); });
+    refreshSubmitState();
 }
 
 function renderAdminExtras() {
@@ -1235,7 +1267,7 @@ function updateTotal() {
     syncChart();
     // Saving requires all 120 mandates to be spread — gray out the save button
     // (but not the reset button) until the total hits exactly 120.
-    $('#submitBtn').disabled = locked || total !== MAX_MANDATES;
+    refreshSubmitState();
 }
 
 function setPartyValue(id, rawValue, snap = true) {
@@ -1299,7 +1331,7 @@ function renderBoard() {
 
 function applyLockToBoard() {
     document.querySelectorAll('#board .prow').forEach(li => li.classList.toggle('locked', locked));
-    $('#submitBtn').disabled = locked || totalGuessed() !== MAX_MANDATES;
+    refreshSubmitState();
     $('#resetBtn').disabled = locked;
     $('#extrasCard').classList.toggle('locked', locked);
     if (locked) setHint('ההגשה נעולה — המועד האחרון עבר');
@@ -1307,11 +1339,49 @@ function applyLockToBoard() {
 
 function setHint(text) { $('#saveHint').textContent = text || ''; }
 
+// What still has to be filled in before a guess can be saved:
+// all 120 mandates spread + every bonus question answered.
+function missingForSave() {
+    const missing = [];
+    const left = MAX_MANDATES - totalGuessed();
+    if (left !== 0) missing.push(`עוד ${left} מנדטים`);
+    if (extras.turnout == null) missing.push('אחוז הצבעה');
+    if (!extras.leastVotes) missing.push('הכי מעט קולות');
+    if (!extras.worstPoll) missing.push('הסקר שהכי ייתבזה');
+    return missing;
+}
+
+// Enables the save button only when nothing is missing (and the deadline
+// hasn't passed and no save is in progress), and lists what's missing.
+function refreshSubmitState() {
+    const btn = $('#submitBtn');
+    const missing = missingForSave();
+    btn.disabled = locked || btn.classList.contains('busy') || missing.length > 0;
+    $('#saveMissing').textContent = (!locked && missing.length) ? 'חסר: ' + missing.join(' · ') : '';
+}
+
+// ================= Save celebration (canvas-confetti) =================
+// Two bursts from the bottom corners in the party + app colors. Purely cosmetic:
+// skipped if the CDN script didn't load, and for users who turned on
+// "reduce motion" in their OS settings.
+function celebrate() {
+    if (typeof confetti !== 'function') return;
+    const opts = {
+        particleCount: 90, spread: 70, startVelocity: 55, ticks: 220, zIndex: 9999,
+        // every party's color + the app's gold/white, so it matches the guess board
+        colors: [...new Set([...PARTIES.map(p => p.color), '#ffb703', '#ffd666', '#ffffff'])],
+        disableForReducedMotion: true
+    };
+    confetti({ ...opts, angle: 60,  origin: { x: 0, y: 0.9 } });
+    confetti({ ...opts, angle: 120, origin: { x: 1, y: 0.9 } });
+}
+
 // ================= Firestore save =================
 async function submitGuess() {
     if (!currentUser || !db) return;
     if (locked) { toast('ההגשה נסגרה — המועד האחרון עבר', true); return; }
     if (totalGuessed() !== MAX_MANDATES) { toast('צריך לחלק בדיוק 120 מנדטים לפני השמירה', true); return; }
+    if (missingForSave().length) { toast('צריך לענות על כל שאלות הבונוס לפני השמירה', true); return; }
     const turnoutText = $('#turnoutInput').value.trim();
     if (turnoutText !== '' && parseTurnout(turnoutText) == null) {
         $('#turnoutInput').classList.add('invalid');
@@ -1330,6 +1400,7 @@ async function submitGuess() {
             updatedAt: Date.now()
         });
         toast('הניחוש נשמר! 🗳️');
+        celebrate();
         setHint('נשמר בהצלחה · ' + new Date().toLocaleString('he-IL'));
     } catch (err) {
         toast('שמירה נכשלה, נסו שוב', true);
@@ -1340,7 +1411,8 @@ async function submitGuess() {
 
 function setSubmitting(on) {
     const btn = $('#submitBtn'), label = $('#submitLabel');
-    btn.disabled = on || locked || totalGuessed() !== MAX_MANDATES;
+    btn.classList.toggle('busy', on);
+    refreshSubmitState();
     label.innerHTML = on ? '<span class="spin"></span> שומר…' : 'שמירת הניחוש';
 }
 
@@ -1413,7 +1485,7 @@ async function loadPendingUsers() {
             row.className = 'bet-card';
             row.innerHTML = `
                 <div class="bet-top">
-                    <div class="bet-info"><div class="bet-party">${u.username}</div></div>
+                    <div class="bet-info"><div class="bet-party">${esc(u.username)}</div></div>
                     <div class="bet-status bet-status-pending">מחכה לאישור</div>
                 </div>
                 <div class="bet-actions"></div>`;
@@ -1440,8 +1512,55 @@ async function approveUser(uid) {
 }
 
 // ================= Everyone's guesses (revealed after the deadline) =================
+// "כל הניחושים" has two sub-tabs: לפי משתמשים (#allList, a card per player)
+// and לפי מפלגות (#allByParty, a card per party). Remembered while the page is open.
+let allSub = 'users';
+function setAllSub(sub) {
+    allSub = sub;
+    document.querySelectorAll('#allSubtabs .subtab').forEach(b => b.classList.toggle('active', b.dataset.sub === sub));
+    $('#allList').style.display    = sub === 'users'   ? 'block' : 'none';
+    $('#allByParty').style.display = sub === 'parties' ? 'block' : 'none';
+}
+
+// לפי מפלגות: one expandable card per party (highest crowd average first).
+// Opening it lists every player and how many mandates they gave that party,
+// highest first (ties by name); your own row is highlighted.
+function renderByParty(players) {
+    const box = $('#allByParty');
+    box.innerHTML = '';
+    PARTIES
+        .map(p => ({ p, avg: players.reduce((s, pl) => s + (Number(pl.mandates[p.id]) || 0), 0) / players.length }))
+        .sort((a, b) => b.avg - a.avg)
+        .forEach(({ p, avg }) => {
+            const rows = players
+                .map(pl => ({ pl, n: Number(pl.mandates[p.id]) || 0 }))
+                .sort((a, b) => b.n - a.n || a.pl.name.localeCompare(b.pl.name, 'he'))
+                .map(({ pl, n }) => `
+                    <div class="sb-row${pl.uid === currentUser.uid ? ' me-row' : ''}">
+                        <span class="sb-name">${esc(pl.name)}</span>
+                        <span class="sb-count">${n}</span>
+                    </div>`).join('');
+            const card = document.createElement('div');
+            card.className = 'lb-card expandable party-card';
+            card.innerHTML = `
+                <div class="top">
+                    <span class="sb-badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</span>
+                    <div class="name">${p.he}</div>
+                    <span class="avg">ממוצע ${avg.toFixed(1)}</span>
+                    <div class="sb-chevron">▾</div>
+                </div>
+                <div class="sb-breakdown tall">${rows}</div>`;
+            card.querySelector('.top').addEventListener('click', () => card.classList.toggle('open'));
+            box.appendChild(card);
+        });
+}
+
 async function loadAllGuesses() {
     const status = $('#allStatus'), list = $('#allList');
+    // Until real data is loaded, show only the plain list (lock / loading / error).
+    $('#allSubtabs').style.display = 'none';
+    $('#allByParty').style.display = 'none';
+    list.style.display = 'block';
 
     if (Date.now() < DEADLINE) {
         status.innerHTML = '';
@@ -1553,13 +1672,17 @@ async function loadAllGuesses() {
                     </div>`).join('');
             card.innerHTML = `
                 <div class="top">
-                    <div class="name">${pl.name}</div>
+                    <div class="name">${esc(pl.name)}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
                 <div class="sb-breakdown">${rows || '<div class="sb-row"><span class="sb-name">אין ניחוש</span></div>'}${extrasSummaryHtml(pl.extras)}</div>`;
             card.querySelector('.top').addEventListener('click', () => card.classList.toggle('open'));
             list.appendChild(card);
         });
+
+        renderByParty(players);
+        $('#allSubtabs').style.display = 'flex';
+        setAllSub(allSub);
     } catch (_) {
         list.innerHTML = '<div class="lb-empty">טעינה נכשלה.</div>';
     }
@@ -1691,7 +1814,7 @@ async function loadLeaderboard() {
         });
         const kings = players.filter(pl => pl.king);
         if (kings.length) {
-            status.innerHTML += `<div class="king-box">👑 מלך הבולים: <b>${kings.map(k => '<bdi>' + k.name + '</bdi>').join(', ')}</b> <span class="king-meta">(<bdi>${maxBullseyes}</bdi> בולים, <bdi>+${KING_BONUS}</bdi> נקודות)</span></div>`;
+            status.innerHTML += `<div class="king-box">👑 מלך הבולים: <b>${kings.map(k => '<bdi>' + esc(k.name) + '</bdi>').join(', ')}</b> <span class="king-meta">(<bdi>${maxBullseyes}</bdi> בולים, <bdi>+${KING_BONUS}</bdi> נקודות)</span></div>`;
         }
         // Bonus questions (real players only).
         // Turnout: exactly ONE winner — the closest guess. Compared in whole
@@ -1724,7 +1847,7 @@ async function loadLeaderboard() {
             if (pl.leastHit) pl.score += LEAST_VOTES_BONUS;
         });
         if (turnoutWinner) {
-            status.innerHTML += `<div class="king-box">🗳️ הכי קרוב באחוז ההצבעה: <b><bdi>${turnoutWinner.name}</bdi></b> <span class="king-meta">(ניחש <bdi>${fmtTurnout(turnoutWinner.extras.turnout)}%</bdi>, בפועל <bdi>${fmtTurnout(realExtras.turnout)}%</bdi>, <bdi>+${TURNOUT_BONUS}</bdi> נקודות)</span></div>`;
+            status.innerHTML += `<div class="king-box">🗳️ הכי קרוב באחוז ההצבעה: <b><bdi>${esc(turnoutWinner.name)}</bdi></b> <span class="king-meta">(ניחש <bdi>${fmtTurnout(turnoutWinner.extras.turnout)}%</bdi>, בפועל <bdi>${fmtTurnout(realExtras.turnout)}%</bdi>, <bdi>+${TURNOUT_BONUS}</bdi> נקודות)</span></div>`;
         }
         if (worstPollIds.length) {
             status.innerHTML += `<div class="king-box">🤡 הסקר שהכי התבזה: <b>${worstPollIds.map(worstPollLabel).join(' / ')}</b> <span class="king-meta">(מי שניחש נכון: <bdi>+${WORST_POLL_BONUS}</bdi> נקודות)</span></div>`;
@@ -1738,7 +1861,7 @@ async function loadLeaderboard() {
             card.innerHTML = `
                 <div class="top">
                     <div class="rank">${medal}</div>
-                    <div class="name">${pl.name}</div>
+                    <div class="name">${esc(pl.name)}</div>
                     <div class="score ${i === 0 ? 'good' : ''}">${fmtNum(pl.score)}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
@@ -1787,7 +1910,7 @@ function renderUsernameSuggestions(filterText) {
         dd.classList.add('show');
         return;
     }
-    dd.innerHTML = matches.map(n => `<div class="suggest-item">${n}</div>`).join('');
+    dd.innerHTML = matches.map(n => `<div class="suggest-item">${esc(n)}</div>`).join('');
     dd.querySelectorAll('.suggest-item').forEach(el => el.addEventListener('click', () => {
         $('#betInvitee').value = el.textContent;
         dd.classList.remove('show');
@@ -1920,7 +2043,7 @@ function renderBetRecord(bets) {
     const rows = [...rec.values()].sort((a, b) => (b.w - b.l) - (a.w - a.l) || b.w - a.w);
     el.innerHTML = '<div class="bet-record"><h3>רשומת הימורים</h3>' + rows.map(r => `
         <div class="bet-record-row${currentUser && r.uid === currentUser.uid ? ' me' : ''}">
-            <span class="rn">${r.name}</span>
+            <span class="rn">${esc(r.name)}</span>
             <span class="rw">ניצחונות ${r.w}</span>
             <span class="rl">הפסדים ${r.l}</span>
         </div>`).join('') + '</div>';
@@ -1936,7 +2059,7 @@ function renderBetCard(bet) {
     let statusKey = bet.status, statusText = BET_STATUS_LABEL[bet.status] || bet.status;
     const s = settleBet(bet);
     if (s) {
-        outcomeHtml = `<div class="bet-outcome">תוצאה בפועל: ${s.real} מנדטים (${sideLabel(s.actual)}) · ניצח/ה: <b>${s.winnerName}</b></div>`;
+        outcomeHtml = `<div class="bet-outcome">תוצאה בפועל: ${s.real} מנדטים (${sideLabel(s.actual)}) · ניצח/ה: <b>${esc(s.winnerName)}</b></div>`;
         if (currentUser && currentUser.uid === s.winnerUid) { statusKey = 'won'; statusText = 'ניצחת'; }
         else if (currentUser && currentUser.uid === s.loserUid) { statusKey = 'lost'; statusText = 'הפסדת'; }
         else statusText = 'הוכרע';
@@ -1946,7 +2069,7 @@ function renderBetCard(bet) {
         <div class="bet-top">
             <div class="bet-info">
                 <div class="bet-party">${party ? party.he : 'מפלגה לא ידועה'} · קו ${bet.line}</div>
-                <div class="bet-sides">${bet.creatorName} (${sideLabel(bet.creatorSide)}) <span class="bet-vs">מול</span> ${bet.inviteeName} (${sideLabel(otherSide)})</div>
+                <div class="bet-sides">${esc(bet.creatorName)} (${sideLabel(bet.creatorSide)}) <span class="bet-vs">מול</span> ${esc(bet.inviteeName)} (${sideLabel(otherSide)})</div>
             </div>
             <div class="bet-status bet-status-${statusKey}">${statusText}</div>
         </div>
@@ -2052,7 +2175,7 @@ $('#logoutBtn').addEventListener('click', logout);
 $('#submitBtn').addEventListener('click', submitGuess);
 $('#resetBtn').addEventListener('click', resetAllGuesses);
 $('#adminSaveBtn').addEventListener('click', saveRealResults);
-wireTurnoutInput($('#turnoutInput'), v => { extras.turnout = v; });
+wireTurnoutInput($('#turnoutInput'), v => { extras.turnout = v; refreshSubmitState(); });
 wireTurnoutInput($('#adminTurnoutInput'), v => { realExtras.turnout = v; });
 renderExtras();
 $('#createBetBtn').addEventListener('click', createSideBet);
@@ -2080,6 +2203,7 @@ document.addEventListener('click', e => {
 });
 $('#logoLightbox').addEventListener('click', e => { if (e.target.id === 'logoLightbox') closeLightbox(); });
 document.querySelectorAll('#tabs .tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+document.querySelectorAll('#allSubtabs .subtab').forEach(b => b.addEventListener('click', () => setAllSub(b.dataset.sub)));
 ['uInput', 'pInput'].forEach(id => $('#' + id).addEventListener('keydown', e => {
     if (e.key === 'Enter') (loginMode === 'login' ? signInWithUsername : registerWithUsername)();
 }));
