@@ -396,10 +396,10 @@
             display: flex; align-items: center; gap: 10px; padding: 9px 12px; width: 100%;
             border: 1.5px solid var(--line); border-radius: 12px; background: var(--paper);
             font: inherit; font-weight: 700; font-size: 14px; text-align: right; cursor: pointer; color: inherit;
-            transition: border-color .15s, box-shadow .15s;
+            transition: border-color .15s, box-shadow .15s, background-color .15s;
         }
         .least-opt img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: #fff; flex-shrink: 0; }
-        .least-opt.active { border-color: var(--navy-light); box-shadow: 0 0 0 3px rgba(36,73,168,.14); }
+        .least-opt.active { border-color: var(--navy-light); box-shadow: 0 0 0 3px rgba(36,73,168,.14); background: #c7daf3; }
         .least-opt.active::after { content: '✓'; margin-inline-start: auto; color: var(--navy-light); font-weight: 800; }
         .extras-card.locked input, .extras-card.locked .least-opt { opacity: .55; pointer-events: none; }
         .side-btn {
