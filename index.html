@@ -716,7 +716,7 @@ const usernameToEmail = u => u.trim().toLowerCase() + USER_EMAIL_DOMAIN;
 // Submission deadline — polls-close time. After this moment predictions lock
 // and can no longer be saved/changed. (+02:00 = Israel Standard Time, since
 // clocks go back to IST on the last Sunday of October.)
-const DEADLINE = new Date('2026-10-27T05:59:00+02:00').getTime();
+const DEADLINE = new Date('2025-10-27T05:59:00+02:00').getTime();
 
 const MAX_MANDATES = 120;
 
@@ -1932,7 +1932,7 @@ async function loadLeaderboard() {
         });
         const kings = players.filter(pl => pl.king);
         if (kings.length) {
-            status.innerHTML += `<div class="king-box">👑 מלך הבולים: <b>${kings.map(k => '<bdi>' + esc(k.name) + '</bdi>').join(', ')}</b> <span class="king-meta">(<bdi>${maxBullseyes}</bdi> בולים, <bdi>+${KING_BONUS}</bdi> נקודות)</span></div>`;
+            status.innerHTML += `<div class="king-box">👑 מלך הבולים: <b>${kings.map(k => '<bdi>' + esc(k.name) + '</bdi>').join(', ')}</b> <span class="king-meta">(<bdi>${maxBullseyes}</bdi> בולים)</span></div>`;
         }
         // Bonus questions (real players only).
         // Turnout: exactly ONE winner — the closest guess. Compared in whole
@@ -1965,10 +1965,13 @@ async function loadLeaderboard() {
             if (pl.leastHit) pl.score += LEAST_VOTES_BONUS;
         });
         if (turnoutWinner) {
-            status.innerHTML += `<div class="king-box">🗳️ הכי קרוב באחוז ההצבעה: <b><bdi>${esc(turnoutWinner.name)}</bdi></b> <span class="king-meta">(ניחש <bdi>${fmtTurnout(turnoutWinner.extras.turnout)}%</bdi>, בפועל <bdi>${fmtTurnout(realExtras.turnout)}%</bdi>, <bdi>+${TURNOUT_BONUS}</bdi> נקודות)</span></div>`;
+            status.innerHTML += `<div class="king-box">🗳️ הכי קרוב באחוז ההצבעה: <b><bdi>${esc(turnoutWinner.name)}</bdi></b> <span class="king-meta">(ניחש <bdi>${fmtTurnout(turnoutWinner.extras.turnout)}%</bdi>, בפועל <bdi>${fmtTurnout(realExtras.turnout)}%</bdi>)</span></div>`;
         }
         if (worstPollIds.length) {
-            status.innerHTML += `<div class="king-box">🤡 הסקר שהכי התבזה: <b>${worstPollIds.map(worstPollLabel).join(' / ')}</b> <span class="king-meta">(מי שניחש נכון: <bdi>+${WORST_POLL_BONUS}</bdi> נקודות)</span></div>`;
+            status.innerHTML += `<div class="king-box">🤡 הסקר שהכי התבזה: <b>${worstPollIds.map(worstPollLabel).join(' / ')}</b></div>`;
+        }
+        if (realExtras.leastVotes) {
+            status.innerHTML += `<div class="king-box">🪦 הכי מעט קולות: <b><bdi>${esc(partyShortName(realExtras.leastVotes))}</bdi></b></div>`;
         }
         players.sort((a, b) => b.score - a.score || b.bullseyes - a.bullseyes);
         list.innerHTML = '';
