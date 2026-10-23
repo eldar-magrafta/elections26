@@ -298,6 +298,7 @@
         .lb-card .score.bad { color: var(--danger); }
         .lb-card .detail { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; font-size: 11.5px; }
         .lb-card .chip { background: var(--paper); border-radius: 8px; padding: 3px 7px; }
+        .king-badge { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--good); color: var(--good); border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; vertical-align: middle; margin-inline-start: 10px; }
 
         .lb-card.expandable .top { cursor: pointer; }
         .sb-chevron { color: var(--muted); font-size: 12px; transition: transform .2s; flex-shrink: 0; }
@@ -1834,7 +1835,7 @@ function countBullseyes(mandates) {
 function scoreBreakdownHtml(mandates, king, pl) {
     const kingRow = king ? `
             <div class="sb-row bullseye">
-                <span class="sb-name">👑 מלך הבולים</span>
+                <span class="sb-name">🎯 מלך הבולים</span>
                 <span class="sb-nums">הכי הרבה בולים</span>
                 <span class="sb-pts good">+${KING_BONUS}</span>
             </div>` : '';
@@ -1932,7 +1933,7 @@ async function loadLeaderboard() {
         });
         const kings = players.filter(pl => pl.king);
         if (kings.length) {
-            status.innerHTML += `<div class="king-box">👑 מלך הבולים: <b>${kings.map(k => '<bdi>' + esc(k.name) + '</bdi>').join(', ')}</b> <span class="king-meta">(<bdi>${maxBullseyes}</bdi> בולים)</span></div>`;
+            status.innerHTML += `<div class="king-box">🎯 מלך הבולים: <b>${kings.map(k => '<bdi>' + esc(k.name) + '</bdi>').join(', ')}</b> <span class="king-meta">(<bdi>${maxBullseyes}</bdi> בולים)</span></div>`;
         }
         // Bonus questions (real players only).
         // Turnout: exactly ONE winner — the closest guess. Compared in whole
@@ -1982,7 +1983,7 @@ async function loadLeaderboard() {
             card.innerHTML = `
                 <div class="top">
                     <div class="rank">${medal}</div>
-                    <div class="name">${esc(pl.name)}</div>
+                    <div class="name">${esc(pl.name)}${pl.king ? ' <span class="king-badge">🎯 מלך הבולים</span>' : ''}${pl.turnoutWin ? ' <span class="king-badge">🗳️ הכי קרוב באחוז ההצבעה</span>' : ''}</div>
                     <div class="score ${i === 0 ? 'good' : ''}">${fmtNum(pl.score)}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
