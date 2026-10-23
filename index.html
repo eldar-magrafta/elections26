@@ -1849,7 +1849,7 @@ function scoreBreakdownHtml(mandates, king, pl) {
         return `
             <div class="sb-row${diff === 0 ? ' bullseye' : ''}">
                 <span class="sb-name">${p.he}</span>
-                <span class="sb-nums">ניחוש ${fmtNum(g)} · תוצאה ${r}</span>
+                <span class="sb-nums">ניחוש: ${fmtNum(g)} · תוצאה: ${r}</span>
                 <span class="sb-pts ${cls}">${sign}</span>
             </div>`;
     }).join('') + kingRow + extrasBreakdownHtml(pl);
