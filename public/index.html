@@ -272,9 +272,8 @@
         .lb-loading, .lb-empty, .all-locked { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
         .all-locked .lock { font-size: 30px; display: block; margin-bottom: 10px; }
 
-        .submit-pressure { text-align: center; font-size: 13.5px; font-weight: 700; color: var(--ink); margin: 2px 0 14px; }
         .teaser-card.me { border: 2px solid var(--gold); box-shadow: var(--shadow); }
-        .teaser-blur { filter: blur(5px); user-select: none; }
+        .teaser-blur { filter: blur(5px); user-select: none; padding: 10px 6px; }
 
         .lb-card {
             background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
@@ -1625,8 +1624,7 @@ function teaserCard(u, genericRows, ownRows) {
 // Pre-deadline: nobody's actual numbers are readable yet (enforced server-side
 // too), so this looks exactly like the real post-deadline list — a clickable,
 // expandable card per person who already submitted — except every card
-// expands to the SAME generic, blurred breakdown (never anyone's real guess),
-// just to nudge everyone who hasn't submitted yet.
+// expands to the SAME generic, blurred breakdown (never anyone's real guess).
 async function renderPreDeadlineTeaser(list) {
     const when = new Date(DEADLINE).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
     const lockHtml = '<div class="all-locked"><span class="lock">🔒</span>' +
@@ -1641,7 +1639,6 @@ async function renderPreDeadlineTeaser(list) {
         submitted.sort((a, b) =>
             (a.uid === currentUser.uid ? -1 : b.uid === currentUser.uid ? 1 : 0) ||
             (a.submittedAt || 0) - (b.submittedAt || 0));
-        const remaining = approved.length - submitted.length;
 
         // You're always allowed to read your own prediction, even before the
         // deadline — only OTHER people's are blocked server-side until then.
@@ -1657,8 +1654,6 @@ async function renderPreDeadlineTeaser(list) {
         }
 
         let html = lockHtml;
-        html += `<div class="submit-pressure">${submitted.length} מתוך ${approved.length} משתתפים כבר הגישו ניחוש` +
-            (remaining > 0 ? ` · <b>${remaining}</b> עדיין לא — ואתם?` : ' · כולם בפנים! 🎉') + '</div>';
         if (submitted.length) {
             const genericRows = genericBlurredBreakdown();
             html += submitted.map(u => teaserCard(u, genericRows, ownRows)).join('');
@@ -2180,7 +2175,7 @@ function renderBetCard(bet) {
     card.innerHTML = `
         <div class="bet-top">
             <div class="bet-info">
-                <div class="bet-party">${party ? party.he : 'מפלגה לא ידועה'} · קו ${bet.line}</div>
+                <div class="bet-party">${party ? party.he : 'מפלגה לא ידועה'} · ליין ${bet.line}</div>
                 <div class="bet-sides">${esc(bet.creatorName)} (${sideLabel(bet.creatorSide)}) <span class="bet-vs">מול</span> ${esc(bet.inviteeName)} (${sideLabel(otherSide)})</div>
             </div>
             <div class="bet-status bet-status-${statusKey}">${statusText}</div>
