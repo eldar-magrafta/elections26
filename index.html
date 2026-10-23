@@ -1055,6 +1055,7 @@ async function signInWithUsername() {
     setUserBusy(true);
     try {
         await signInWithEmailAndPassword(auth, c.email, c.password);
+        new Audio('assets/democratia.mp3').play().catch(() => {});
     } catch (e) {
         const code = e && e.code;
         if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found')
