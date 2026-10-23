@@ -292,13 +292,14 @@
         .crowd-card .sb-row { border-top-color: rgba(255,255,255,.18); }
         .crowd-card .sb-name { color: #fff; }
         .crowd-card .sb-count { color: var(--gold-light); }
-        .lb-card .name { flex: 1; font-weight: 700; font-size: 14.5px; }
+        .lb-card .name { flex: 1; font-weight: 700; font-size: 14.5px; display: grid; grid-template-columns: auto 1fr; align-items: start; column-gap: 10px; }
+        .lb-card .name .badges { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
         .lb-card .score { font-family: var(--num-font); font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
         .lb-card .score.good { color: var(--good); }
         .lb-card .score.bad { color: var(--danger); }
         .lb-card .detail { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; font-size: 11.5px; }
         .lb-card .chip { background: var(--paper); border-radius: 8px; padding: 3px 7px; }
-        .king-badge { position: relative; display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--good); color: var(--good); border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; vertical-align: middle; margin-inline-start: 10px; }
+        .king-badge { position: relative; display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--good); color: var(--good); border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; vertical-align: middle; }
         .king-badge[data-tip] { cursor: help; }
         .king-badge[data-tip]::after {
             content: attr(data-tip);
@@ -1838,7 +1839,7 @@ async function loadAllGuesses() {
                     </div>`).join('');
             card.innerHTML = `
                 <div class="top">
-                    <div class="name">${esc(pl.name)}${generous ? ' <span class="king-badge" data-tip="משתמש זה נתן הכי הרבה מנדטים לחבורת רק לא ביבי">🇵🇸 יקיר הרל"ב</span>' : ''}${haredi ? ' <span class="king-badge" data-tip="משתמש זה נתן הכי הרבה מנדטים למפלגות החרדיות">🕍 נמות ולא נתגייס</span>' : ''}${likud ? ' <span class="king-badge" data-tip="משתמש זה נתן הכי הרבה מנדטים לליכוד">👑 ביביסט מושבע</span>' : ''}</div>
+                    <div class="name"><span>${esc(pl.name)}</span><span class="badges">${generous ? '<span class="king-badge" data-tip="משתמש זה נתן הכי הרבה מנדטים לחבורת רק לא ביבי">🇵🇸 יקיר הרל"ב</span>' : ''}${haredi ? '<span class="king-badge" data-tip="משתמש זה נתן הכי הרבה מנדטים למפלגות החרדיות">🕍 נמות ולא נתגייס</span>' : ''}${likud ? '<span class="king-badge" data-tip="משתמש זה נתן הכי הרבה מנדטים לליכוד">👑 ביביסט מושבע</span>' : ''}</span></div>
                     <div class="sb-chevron">▾</div>
                 </div>
                 <div class="sb-breakdown">${rows || '<div class="sb-row"><span class="sb-name">אין ניחוש</span></div>'}${extrasSummaryHtml(pl.extras)}</div>`;
@@ -2030,7 +2031,7 @@ async function loadLeaderboard() {
             card.innerHTML = `
                 <div class="top">
                     <div class="rank">${medal}</div>
-                    <div class="name">${esc(pl.name)}${pl.king ? ' <span class="king-badge">🎯 מלך הבולים</span>' : ''}${pl.turnoutWin ? ' <span class="king-badge">🗳️ הכי קרוב באחוז ההצבעה</span>' : ''}</div>
+                    <div class="name"><span>${esc(pl.name)}</span><span class="badges">${pl.king ? '<span class="king-badge">🎯 מלך הבולים</span>' : ''}${pl.turnoutWin ? '<span class="king-badge">🗳️ הכי קרוב באחוז ההצבעה</span>' : ''}</span></div>
                     <div class="score ${i === 0 ? 'good' : ''}">${fmtNum(pl.score)}</div>
                     <div class="sb-chevron">▾</div>
                 </div>
