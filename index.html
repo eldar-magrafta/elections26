@@ -731,8 +731,11 @@ const RAW_PARTIES = [
     ['רק', 'ביחד - נפתלי בנט', 'bennet.jpg'],
     ['שס', 'ש"ס - אריה דרעי', 'Shas_logo.svg.webp']
 ];
+// Serve the pre-shrunk 512x512 webp versions (logos-sm/) instead of the
+// original multi-megabyte logo files (logos/) — plenty sharp for a badge,
+// hover preview, or lightbox, at a fraction of the download size.
 const PARTIES = RAW_PARTIES.map(([id, he, logo], i) => ({
-    id, he, logo: logo ? `logos/${logo}` : '', color: PALETTE[i % PALETTE.length]
+    id, he, logo: logo ? `logos-sm/${logo.replace(/\.[^.]+$/, '')}.webp` : '', color: PALETTE[i % PALETTE.length]
 }));
 
 // הקוף — a joke "player" with no actual opinion: everyone gets a flat 10,
