@@ -1049,13 +1049,26 @@ async function registerWithUsername() {
     }
 }
 
+// iOS Safari only allows audio.play() when it's called directly inside a user
+// gesture (tap/click) — an awaited network call in between breaks that link.
+// Reusing one element and "unlocking" it synchronously at tap time keeps it
+// playable later, after the login promise resolves.
+const loginSound = new Audio('assets/democratia.mp3');
+function unlockLoginSound() {
+    loginSound.play().then(() => {
+        loginSound.pause();
+        loginSound.currentTime = 0;
+    }).catch(() => {});
+}
+
 async function signInWithUsername() {
+    unlockLoginSound();
     const c = readCreds();
     if (!c) return;
     setUserBusy(true);
     try {
         await signInWithEmailAndPassword(auth, c.email, c.password);
-        new Audio('assets/democratia.mp3').play().catch(() => {});
+        loginSound.play().catch(() => {});
     } catch (e) {
         const code = e && e.code;
         if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found')
