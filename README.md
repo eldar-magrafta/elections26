@@ -90,8 +90,8 @@ const FIREBASE_CONFIG = {
   the real 2026 election date until you edit it.**
 - `ADMIN_EMAIL` in `index.html` — this is the synthetic email of whichever username you
   want to be the admin (the one who, after the election, enters the real mandate count
-  per party). If you register with username `eldar`, the admin email is
-  `eldar@users.elections26.app`. Set this *before* you register that account, and update
+  per party). If you register with username `rasar`, the admin email is
+  `rasar@users.elections26.app`. Set this *before* you register that account, and update
   the matching email in `firestore.rules` too.
 
 ## 6. Run it

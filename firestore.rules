@@ -10,7 +10,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return request.auth.token.email == 'eldar@users.elections26.app';
+      return request.auth.token.email == 'rasar@users.elections26.app';
     }
 
     function isApproved() {
@@ -36,6 +36,12 @@ service cloud.firestore {
     // Per-account approval gate. New registrations always start unapproved —
     // nobody can approve themselves; only the admin account may flip this,
     // and only the approved flag (identity fields are pinned on update).
+    //
+    // A user may ALSO flip their own hasSubmitted flag to true (set the moment
+    // they save a prediction) so the "כל הניחושים" tab can show who has
+    // already submitted before the deadline, without exposing what anyone
+    // guessed. They can't touch approved/uid/username, and can't use it to
+    // unflag themselves or anyone else.
     match /users/{uid} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
@@ -43,9 +49,14 @@ service cloud.firestore {
                     && request.resource.data.uid == uid
                     && request.resource.data.approved == false;
       allow update: if request.auth != null
-                    && isAdmin()
                     && request.resource.data.uid == resource.data.uid
-                    && request.resource.data.username == resource.data.username;
+                    && request.resource.data.username == resource.data.username
+                    && (
+                         isAdmin()
+                         || (request.auth.uid == uid
+                             && request.resource.data.approved == resource.data.approved
+                             && request.resource.data.hasSubmitted == true)
+                       );
       allow delete: if false;
     }
 
@@ -54,7 +65,7 @@ service cloud.firestore {
     match /meta/{docId} {
       allow read:  if request.auth != null;
       allow write: if request.auth != null
-                   && request.auth.token.email == 'eldar@users.elections26.app';
+                   && request.auth.token.email == 'rasar@users.elections26.app';
     }
 
     // Username -> uid registry, so a side bet can look up "dana123" and

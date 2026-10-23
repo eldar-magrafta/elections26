@@ -272,6 +272,10 @@
         .lb-loading, .lb-empty, .all-locked { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
         .all-locked .lock { font-size: 30px; display: block; margin-bottom: 10px; }
 
+        .submit-pressure { text-align: center; font-size: 13.5px; font-weight: 700; color: var(--ink); margin: 2px 0 14px; }
+        .teaser-card.me { border: 2px solid var(--gold); box-shadow: var(--shadow); }
+        .teaser-blur { filter: blur(5px); user-select: none; }
+
         .lb-card {
             background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
             margin-bottom: 8px; box-shadow: var(--shadow-sm); transition: box-shadow .15s;
@@ -454,7 +458,7 @@
     </style>
 </head>
 <body>
-<button class="btn-ghost logout-fixed" id="logoutBtn" style="display:none">התנתקות</button>
+<button class="btn-ghost logout-fixed" id="logoutBtn" style="display:none">התנתק</button>
 <div class="update-overlay" id="updateOverlay">
     <div class="update-card">
         <div class="update-icon">🔄</div>
@@ -509,8 +513,8 @@
     <div class="tabs" id="tabs">
         <button class="tab active" data-tab="guess">הניחוש שלי</button>
         <button class="tab" data-tab="all">כל הניחושים</button>
-        <button class="tab" data-tab="board">לוח התוצאות</button>
         <button class="tab" data-tab="sidebets">הימורים צדדיים<span class="tab-badge" id="sidebetsBadge" style="display:none">0</span></button>
+        <button class="tab" data-tab="board">לוח התוצאות</button>
         <button class="tab" id="adminTab" data-tab="admin" style="display:none">עדכון תוצאות</button>
     </div>
 
@@ -687,7 +691,7 @@ const SEASON = '2026';
 
 // Only this account can edit the real election results (the "עדכון תוצאות" tab).
 // Change this to the email you'll actually register with (see README).
-const ADMIN_EMAIL = 'eldar@users.elections26.app';
+const ADMIN_EMAIL = 'rasar@users.elections26.app';
 
 // ── Username login ──
 // Firebase Auth needs an email, so each username maps to a synthetic address
@@ -1082,6 +1086,7 @@ function showLogin() {
 async function enterApp() {
     $('#loginCard').style.display = 'none';
     $('#logoutBtn').style.display = 'block';
+    $('#logoutBtn').textContent = 'התנתק, ' + (currentUser.displayName || '');
 
     const isAdmin = currentUser.email === ADMIN_EMAIL;
     $('#adminTab').style.display = isAdmin ? '' : 'none';
@@ -1399,6 +1404,12 @@ async function submitGuess() {
             extras: { turnout: extras.turnout, leastVotes: extras.leastVotes, worstPoll: extras.worstPoll },
             updatedAt: Date.now()
         });
+        // Flag that this user has submitted (no guess data in it) so the
+        // "כל הניחושים" tab can show who's in before the deadline, without
+        // leaking anyone's actual numbers.
+        try {
+            await updateDoc(doc(db, 'users', currentUser.uid), { hasSubmitted: true, submittedAt: Date.now() });
+        } catch (_) { /* non-fatal — the prediction itself already saved */ }
         toast('הניחוש נשמר! 🗳️');
         celebrate();
         setHint('נשמר בהצלחה · ' + new Date().toLocaleString('he-IL'));
@@ -1555,6 +1566,111 @@ function renderByParty(players) {
         });
 }
 
+// Same generic, made-up party breakdown for every card below — not tied to
+// anyone's real guess — just so the expanded card looks/feels like the real
+// post-deadline one instead of an empty shell.
+function genericBlurredBreakdown() {
+    const mandateRows = PARTIES
+        .map(p => `
+            <div class="sb-row">
+                <span class="sb-badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</span>
+                <span class="sb-name">${p.he}</span>
+                <span class="sb-count">99</span>
+            </div>`).join('');
+    const extraRows = `
+            <div class="sb-row">
+                <span class="sb-name">🗳️ אחוז הצבעה</span>
+                <span class="sb-count"><bdi>99%</bdi></span>
+            </div>
+            <div class="sb-row">
+                <span class="sb-name">📉 הכי מעט קולות</span>
+                <span class="sb-count" style="font-size:12px">???</span>
+            </div>
+            <div class="sb-row">
+                <span class="sb-name">🤡 הסקר שהכי ייתבזה</span>
+                <span class="sb-count" style="font-size:12px">???</span>
+            </div>`;
+    return mandateRows + extraRows;
+}
+
+// Rows for the current user's own card: their real, unblurred guess — there's
+// no point hiding your own answers from yourself. Everyone else still gets
+// the generic blurred placeholder.
+function ownRealBreakdown(mandates, extras) {
+    const mandateRows = PARTIES
+        .slice()
+        .sort((a, b) => (Number(mandates[b.id]) || 0) - (Number(mandates[a.id]) || 0))
+        .map(p => `
+            <div class="sb-row">
+                <span class="sb-badge" style="background:${p.logo ? '#fff' : p.color + '22'};color:${p.color}">${badgeHtml(p)}</span>
+                <span class="sb-name">${p.he}</span>
+                <span class="sb-count">${Number(mandates[p.id]) || 0}</span>
+            </div>`).join('');
+    return mandateRows + extrasSummaryHtml(extras);
+}
+
+function teaserCard(u, genericRows, ownRows) {
+    const isMe = u.uid === currentUser.uid;
+    const rows = isMe && ownRows ? ownRows : genericRows;
+    return `
+        <div class="lb-card expandable teaser-card${isMe ? ' me' : ''}">
+            <div class="top">
+                <div class="name">${esc(u.username || 'שחקן')}</div>
+                <div class="sb-chevron">▾</div>
+            </div>
+            <div class="sb-breakdown">${isMe && ownRows ? rows : `<div class="teaser-blur">${rows}</div>`}</div>
+        </div>`;
+}
+
+// Pre-deadline: nobody's actual numbers are readable yet (enforced server-side
+// too), so this looks exactly like the real post-deadline list — a clickable,
+// expandable card per person who already submitted — except every card
+// expands to the SAME generic, blurred breakdown (never anyone's real guess),
+// just to nudge everyone who hasn't submitted yet.
+async function renderPreDeadlineTeaser(list) {
+    const when = new Date(DEADLINE).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const lockHtml = '<div class="all-locked"><span class="lock">🔒</span>' +
+        'הניחושים של כל המשתתפים ייחשפו<br>מיד לאחר סגירת ההגשה' +
+        '<br><b>' + when + '</b></div>';
+    list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    try {
+        const snaps = await getDocs(collection(db, 'users'));
+        const approved = [];
+        snaps.forEach(d => { const u = d.data(); if (u.approved) approved.push({ uid: d.id, ...u }); });
+        const submitted = approved.filter(u => u.hasSubmitted);
+        submitted.sort((a, b) =>
+            (a.uid === currentUser.uid ? -1 : b.uid === currentUser.uid ? 1 : 0) ||
+            (a.submittedAt || 0) - (b.submittedAt || 0));
+        const remaining = approved.length - submitted.length;
+
+        // You're always allowed to read your own prediction, even before the
+        // deadline — only OTHER people's are blocked server-side until then.
+        let ownRows = null;
+        if (submitted.some(u => u.uid === currentUser.uid)) {
+            try {
+                const ownSnap = await getDoc(doc(db, 'predictions', currentUser.uid));
+                if (ownSnap.exists()) {
+                    const p = ownSnap.data();
+                    ownRows = ownRealBreakdown(p.mandates || {}, cleanExtras(p.extras));
+                }
+            } catch (_) { /* fall back to the generic card for "me" too */ }
+        }
+
+        let html = lockHtml;
+        html += `<div class="submit-pressure">${submitted.length} מתוך ${approved.length} משתתפים כבר הגישו ניחוש` +
+            (remaining > 0 ? ` · <b>${remaining}</b> עדיין לא — ואתם?` : ' · כולם בפנים! 🎉') + '</div>';
+        if (submitted.length) {
+            const genericRows = genericBlurredBreakdown();
+            html += submitted.map(u => teaserCard(u, genericRows, ownRows)).join('');
+        }
+        list.innerHTML = html;
+        list.querySelectorAll('.teaser-card .top').forEach(top =>
+            top.addEventListener('click', () => top.closest('.lb-card').classList.toggle('open')));
+    } catch (_) {
+        list.innerHTML = lockHtml;
+    }
+}
+
 async function loadAllGuesses() {
     const status = $('#allStatus'), list = $('#allList');
     // Until real data is loaded, show only the plain list (lock / loading / error).
@@ -1564,11 +1680,7 @@ async function loadAllGuesses() {
 
     if (Date.now() < DEADLINE) {
         status.innerHTML = '';
-        const when = new Date(DEADLINE).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
-        list.innerHTML =
-            '<div class="all-locked"><span class="lock">🔒</span>' +
-            'הניחושים של כל המשתתפים ייחשפו<br>מיד לאחר סגירת ההגשה' +
-            '<br><b>' + when + '</b></div>';
+        await renderPreDeadlineTeaser(list);
         return;
     }
 
