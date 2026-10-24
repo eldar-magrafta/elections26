@@ -1563,6 +1563,11 @@ async function approveUser(uid) {
 // "כל הניחושים" has two sub-tabs: לפי משתמשים (#allList, a card per player)
 // and לפי מפלגות (#allByParty, a card per party). Remembered while the page is open.
 let allSub = 'users';
+// Tracks which phase ('pre' or 'post' deadline) is currently rendered in the
+// "all guesses" tab, so re-clicking the tab doesn't re-fetch from Firestore
+// every time — only the first load (and the one right after the deadline
+// passes, since the view genuinely changes) actually hits the network.
+let allGuessesLoaded = null;
 function setAllSub(sub) {
     allSub = sub;
     document.querySelectorAll('#allSubtabs .subtab').forEach(b => b.classList.toggle('active', b.dataset.sub === sub));
@@ -1706,14 +1711,31 @@ async function renderPreDeadlineTeaser(list) {
 
 async function loadAllGuesses() {
     const status = $('#allStatus'), list = $('#allList');
+    const phase = Date.now() < DEADLINE ? 'pre' : 'post';
+
+    // Already fetched for this phase this page-load — just re-show it instead
+    // of hitting Firestore again.
+    if (allGuessesLoaded === phase) {
+        if (phase === 'post') {
+            $('#allSubtabs').style.display = 'flex';
+            setAllSub(allSub);
+        } else {
+            $('#allSubtabs').style.display = 'none';
+            $('#allByParty').style.display = 'none';
+            list.style.display = 'block';
+        }
+        return;
+    }
+
     // Until real data is loaded, show only the plain list (lock / loading / error).
     $('#allSubtabs').style.display = 'none';
     $('#allByParty').style.display = 'none';
     list.style.display = 'block';
 
-    if (Date.now() < DEADLINE) {
+    if (phase === 'pre') {
         status.innerHTML = '';
         await renderPreDeadlineTeaser(list);
+        allGuessesLoaded = 'pre';
         return;
     }
 
@@ -1850,6 +1872,7 @@ async function loadAllGuesses() {
         renderByParty(players);
         $('#allSubtabs').style.display = 'flex';
         setAllSub(allSub);
+        allGuessesLoaded = 'post';
     } catch (_) {
         list.innerHTML = '<div class="lb-empty">טעינה נכשלה.</div>';
     }
