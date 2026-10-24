@@ -88,11 +88,12 @@ const FIREBASE_CONFIG = {
 - `DEADLINE` in `index.html` — set this to the real election date/time (poll-closing
   time is the natural choice). It currently has a placeholder value; **it will not match
   the real 2026 election date until you edit it.**
-- `ADMIN_EMAIL` in `index.html` — this is the synthetic email of whichever username you
-  want to be the admin (the one who, after the election, enters the real mandate count
-  per party). If you register with username `rasar`, the admin email is
-  `rasar@users.elections26.app`. Set this *before* you register that account, and update
-  the matching email in `firestore.rules` too.
+- `ADMIN_UID` in `index.html` — the Firebase UID (not email/username) of whichever
+  account you want to be the admin (the one who, after the election, enters the real
+  mandate count per party). Register that account first, then copy its UID from Firebase
+  Console → Authentication → Users, and set it here. Update the matching UID in
+  `firestore.rules` too — using the UID instead of the email avoids leaking the admin's
+  username in the public repo.
 
 ## 6. Run it
 

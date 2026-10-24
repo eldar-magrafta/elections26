@@ -10,7 +10,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return request.auth.token.email == 'rasar@users.elections26.app';
+      return request.auth.uid == 'Hrunf67LwlVfZ7xNbEqwn0SEXFt2';
     }
 
     function isApproved() {
@@ -65,7 +65,7 @@ service cloud.firestore {
     match /meta/{docId} {
       allow read:  if request.auth != null;
       allow write: if request.auth != null
-                   && request.auth.token.email == 'rasar@users.elections26.app';
+                   && isAdmin();
     }
 
     // Username -> uid registry, so a side bet can look up "dana123" and

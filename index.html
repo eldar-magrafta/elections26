@@ -713,8 +713,8 @@ const FIREBASE_CONFIG = {
 const SEASON = '2026';
 
 // Only this account can edit the real election results (the "עדכון תוצאות" tab).
-// Change this to the email you'll actually register with (see README).
-const ADMIN_EMAIL = 'rasar@users.elections26.app';
+// This is the admin account's Firebase UID, not its email/username.
+const ADMIN_UID = 'Hrunf67LwlVfZ7xNbEqwn0SEXFt2';
 
 // ── Username login ──
 // Firebase Auth needs an email, so each username maps to a synthetic address
@@ -1127,7 +1127,7 @@ async function enterApp() {
     $('#logoutBtn').style.display = 'block';
     $('#logoutBtn').textContent = 'התנתק, ' + (currentUser.displayName || '');
 
-    const isAdmin = currentUser.email === ADMIN_EMAIL;
+    const isAdmin = currentUser.uid === ADMIN_UID;
     $('#adminTab').style.display = isAdmin ? '' : 'none';
 
     // Gatekeeping: every non-admin account needs the admin's manual approval
@@ -1486,7 +1486,7 @@ function renderAdminBoard() {
 }
 
 async function saveRealResults() {
-    if (!currentUser || currentUser.email !== ADMIN_EMAIL) return;
+    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
     const adminTurnoutText = $('#adminTurnoutInput').value.trim();
     if (adminTurnoutText !== '' && parseTurnout(adminTurnoutText) == null) {
         $('#adminTurnoutInput').classList.add('invalid');
