@@ -281,6 +281,15 @@
             background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
             margin-bottom: 8px; box-shadow: var(--shadow-sm); transition: box-shadow .15s;
         }
+        .skeleton {
+            background: linear-gradient(90deg, #e3e9f1 25%, #f4f7fb 50%, #e3e9f1 75%);
+            background-size: 200% 100%; animation: shimmer 1.2s infinite linear; border-radius: 8px;
+        }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+        .skel-card { display: flex; align-items: center; gap: 10px; }
+        .skel-rank { width: 28px; height: 28px; border-radius: 50%; }
+        .skel-name { flex: 1; height: 16px; }
+        .skel-score { width: 44px; height: 16px; }
         .lb-card .top { display: flex; align-items: center; gap: 10px; }
         .lb-card .rank {
             width: 30px; height: 30px; border-radius: 50%; background: var(--paper); display: grid; place-items: center;
@@ -1511,6 +1520,12 @@ async function saveRealResults() {
     }
 }
 
+function skeletonCards(n = 4) {
+    return Array.from({ length: n }, () =>
+        '<div class="lb-card skel-card"><div class="skeleton skel-rank"></div>' +
+        '<div class="skeleton skel-name"></div><div class="skeleton skel-score"></div></div>').join('');
+}
+
 // ================= Admin: pending user approvals =================
 async function loadPendingUsers() {
     const list = $('#pendingUsersList');
@@ -1673,7 +1688,7 @@ async function renderPreDeadlineTeaser(list) {
     const lockHtml = '<div class="all-locked"><span class="lock">🔒</span>' +
         'הניחושים של כל המשתתפים ייחשפו<br>מיד לאחר סגירת ההגשה' +
         '<br><b>' + when + '</b></div>';
-    list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    list.innerHTML = skeletonCards();
     try {
         const snaps = await getDocs(collection(db, 'users'));
         const approved = [];
@@ -1740,7 +1755,7 @@ async function loadAllGuesses() {
     }
 
     status.innerHTML = 'ההגשה נסגרה — כל הניחושים חשופים';
-    list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    list.innerHTML = skeletonCards();
     try {
         const snaps = await getDocs(collection(db, 'predictions'));
         const players = [];
@@ -1965,7 +1980,7 @@ async function loadLeaderboard() {
     }
 
     status.innerHTML = 'מחושב מול תוצאות הבחירות האמיתיות';
-    list.innerHTML = '<div class="lb-loading">טוען…</div>';
+    list.innerHTML = skeletonCards();
     try {
         const snaps = await getDocs(collection(db, 'predictions'));
         const players = [];
