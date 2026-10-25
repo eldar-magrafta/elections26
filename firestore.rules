@@ -13,6 +13,13 @@ service cloud.firestore {
       return request.auth.uid == 'Hrunf67LwlVfZ7xNbEqwn0SEXFt2';
     }
 
+    // The username portion of the signed-in user's email (set once at
+    // registration via usernameToEmail), so writes can be checked against
+    // who Firebase actually verified — not whatever a request claims.
+    function myUsername() {
+      return request.auth.token.email.split('@')[0];
+    }
+
     function isApproved() {
       return isAdmin()
              || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.approved == true;
@@ -28,7 +35,8 @@ service cloud.firestore {
       allow write: if request.auth != null
                    && request.auth.uid == uid
                    && !afterDeadline()
-                   && isApproved();
+                   && isApproved()
+                   && request.resource.data.name.lower() == myUsername();
       allow read:  if request.auth != null
                    && (request.auth.uid == uid || afterDeadline());
     }
