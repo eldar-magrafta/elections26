@@ -336,6 +336,12 @@
         .sb-pts { font-family: var(--num-font); font-weight: 700; min-width: 28px; text-align: left; }
         .sb-pts.good { color: var(--good); }
         .king-box { display: block; width: fit-content; max-width: 100%; margin: 8px auto 0; padding: 6px 12px; border: 2px solid var(--good); border-radius: 12px; color: var(--good); font-size: 13px; }
+        .results-banner {
+            margin-bottom: 10px; padding: 10px 14px; border-radius: 12px; text-align: center;
+            font-size: 13.5px; font-weight: 700; border: 2px solid transparent;
+        }
+        .results-banner.is-partial { background: rgba(226,59,78,.12); border-color: var(--danger); color: var(--danger); }
+        .results-banner.is-final { background: rgba(22,163,74,.12); border-color: var(--good); color: var(--good); }
         .sb-row.bullseye { background: rgba(22,163,74,.14); border-radius: 8px; padding-inline: 6px; }
         .sb-pts.bad { color: var(--danger); }
         .sb-badge {
@@ -592,6 +598,7 @@
     </div>
 
     <div id="leaderView" style="display:none">
+        <div id="resultsBanner" style="display:none"></div>
         <div id="leaderStatus" style="margin-bottom:10px;color:var(--muted);font-size:13px;text-align:center"></div>
         <div id="leaderList"></div>
         <div class="howto">
@@ -648,6 +655,13 @@
                 <label for="adminTurnoutInput">אחוז הצבעה ארצי בפועל</label>
                 <div class="turnout-wrap">
                     <input id="adminTurnoutInput" type="text" inputmode="decimal" maxlength="5" placeholder="56.84" autocomplete="off">
+                    <span>%</span>
+                </div>
+            </div>
+            <div class="field">
+                <label for="adminCountedPctInput">אחוז קולות שנספרו (100 = תוצאה סופית)</label>
+                <div class="turnout-wrap">
+                    <input id="adminCountedPctInput" type="number" min="1" max="100" step="1" placeholder="100" autocomplete="off">
                     <span>%</span>
                 </div>
             </div>
@@ -896,6 +910,7 @@ function renderExtras() {
 function renderAdminExtras() {
     $('#adminTurnoutInput').value = fmtTurnout(realExtras.turnout);
     $('#adminTurnoutInput').classList.remove('invalid');
+    $('#adminCountedPctInput').value = realCountedPct;
     renderLeastOpts($('#adminLeastOpts'), () => realExtras.leastVotes, v => { realExtras.leastVotes = v; });
 }
 
@@ -963,6 +978,9 @@ let extras = { turnout: null, leastVotes: null, worstPoll: null };
 let realExtras = { turnout: null, leastVotes: null, worstPoll: null }; // admin-set, after election
 let realResults = {}; // partyId -> mandates (admin-set, after election)
 let hasRealResults = false;
+// % of votes counted so far in the admin-set real results (1-100). 100 = final count.
+// Kept outside realExtras/cleanExtras since that helper strips unknown fields.
+let realCountedPct = 100;
 let locked = false;
 let activeTab = 'guess';
 let loginMode = 'login';
@@ -1228,6 +1246,8 @@ async function enterApp() {
                 hasRealResults = true;
             }
             realExtras = cleanExtras(data.extras);
+            const cp = Number(data.countedPct);
+            realCountedPct = Number.isFinite(cp) && cp >= 1 && cp <= 100 ? Math.round(cp) : 100;
         }
     } catch (_) { /* not set yet */ }
 
@@ -1502,6 +1522,14 @@ async function saveRealResults() {
         toast('אחוז הצבעה צריך להיות בפורמט 56.84', true);
         return;
     }
+    const countedPctInput = $('#adminCountedPctInput');
+    const countedPct = Math.round(Number(countedPctInput.value));
+    if (!Number.isFinite(countedPct) || countedPct < 1 || countedPct > 100) {
+        countedPctInput.classList.add('invalid');
+        toast('אחוז קולות שנספרו צריך להיות מספר בין 1 ל־100', true);
+        return;
+    }
+    countedPctInput.classList.remove('invalid');
     const btn = $('#adminSaveBtn');
     btn.disabled = true;
     try {
@@ -1509,9 +1537,11 @@ async function saveRealResults() {
             season: SEASON,
             mandates: { ...realResults },
             extras: { turnout: realExtras.turnout, leastVotes: realExtras.leastVotes },
+            countedPct,
             updatedAt: Date.now()
         });
         hasRealResults = true;
+        realCountedPct = countedPct;
         toast('תוצאות הבחירות נשמרו');
     } catch (_) {
         toast('שמירה נכשלה, נסו שוב', true);
@@ -1971,13 +2001,20 @@ function extrasBreakdownHtml(pl) {
 }
 
 async function loadLeaderboard() {
-    const status = $('#leaderStatus'), list = $('#leaderList');
+    const status = $('#leaderStatus'), list = $('#leaderList'), banner = $('#resultsBanner');
 
     if (!hasRealResults) {
+        banner.style.display = 'none';
         status.innerHTML = '';
         list.innerHTML = '<div class="lb-empty">לוח התוצאות יופיע כשתוצאות הבחירות האמיתיות יוזנו ע"י האדמו"ר.</div>';
         return;
     }
+
+    banner.style.display = '';
+    banner.className = 'results-banner ' + (realCountedPct < 100 ? 'is-partial' : 'is-final');
+    banner.textContent = realCountedPct < 100
+        ? `⚠️ תוצאות חלקיות — ${realCountedPct}% מהקולות נספרו, המנדטים ותשובות שאלות הבונוס עדיין יכולים להשתנות`
+        : '✅ תוצאות סופיות — 100% מהקולות נספרו';
 
     status.innerHTML = 'מחושב מול תוצאות הבחירות האמיתיות';
     list.innerHTML = skeletonCards();
